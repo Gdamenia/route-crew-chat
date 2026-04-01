@@ -262,6 +262,7 @@ export default function ChatPage() {
           <Send className={isDriving ? 'w-5 h-5 text-primary-foreground' : 'w-4 h-4 text-primary-foreground'} />
         </button>
       </div>
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} targetType="message" targetId={reportTargetId} />
     </div>
   );
 }
