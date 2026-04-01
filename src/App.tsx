@@ -1,46 +1,58 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import AuthPage from "./pages/AuthPage";
-import Index from "./pages/Index";
-import ChannelsPage from "./pages/ChannelsPage";
-import VoicePage from "./pages/VoicePage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFound from "./pages/NotFound";
-import { AppLayout } from "./components/AppLayout";
+import { useAuthInit } from "@/hooks/useAuthInit";
+import { useAuthStore } from "@/stores/authStore";
+import OnboardingPage from "./pages/OnboardingPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import CreateProfilePage from "./pages/CreateProfilePage";
+import MapFullPage from "./pages/MapFullPage";
+import ChannelsListPage from "./pages/ChannelsListPage";
+import ChatPage from "./pages/ChatPage";
+import VoiceRoomPage from "./pages/VoiceRoomPage";
+import ProfileFullPage from "./pages/ProfileFullPage";
 
 const queryClient = new QueryClient();
 
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { session, isInitialized } = useAuthStore();
+  if (!isInitialized) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+  if (!session) return <Navigate to="/welcome" replace />;
+  return <>{children}</>;
+}
+
+function RequireProfile({ children }: { children: React.ReactNode }) {
+  const { session, profile, isInitialized } = useAuthStore();
+  if (!isInitialized) return null;
+  if (!session) return <Navigate to="/welcome" replace />;
+  if (!profile) return <Navigate to="/create-profile" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse text-lg font-medium">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthPage />;
-  }
+  useAuthInit();
+  const { session, profile } = useAuthStore();
 
   return (
-    <AppLayout>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/channels" element={<ChannelsPage />} />
-        <Route path="/voice" element={<VoicePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AppLayout>
+    <Routes>
+      <Route path="/welcome" element={session ? (profile ? <Navigate to="/" /> : <Navigate to="/create-profile" />) : <OnboardingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/create-profile" element={<RequireAuth><CreateProfilePage /></RequireAuth>} />
+      <Route path="/" element={<RequireProfile><MapFullPage /></RequireProfile>} />
+      <Route path="/channels" element={<RequireProfile><ChannelsListPage /></RequireProfile>} />
+      <Route path="/chat/:channelId" element={<RequireProfile><ChatPage /></RequireProfile>} />
+      <Route path="/voice/:channelId" element={<RequireProfile><VoiceRoomPage /></RequireProfile>} />
+      <Route path="/profile" element={<RequireProfile><ProfileFullPage /></RequireProfile>} />
+      <Route path="*" element={<Navigate to={session ? "/" : "/welcome"} replace />} />
+    </Routes>
   );
 }
 
@@ -49,11 +61,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
