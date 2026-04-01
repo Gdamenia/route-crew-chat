@@ -4,12 +4,11 @@ import type { DirectMessage, DriverProfile, Conversation } from '@/lib/types';
 const loadProfilesMap = async (userIds: string[]) => {
   if (userIds.length === 0) return new Map<string, DriverProfile>();
   const { data } = await supabase.from('driver_profiles').select('*').in('user_id', userIds);
-  return new Map((data ?? []).map((p) => [p.user_id, p as DriverProfile] as const));
+  return new Map((data ?? []).map((p) => [p.user_id, p as unknown as DriverProfile] as const));
 };
 
 export const dmService = {
   async getConversations(userId: string): Promise<Conversation[]> {
-    // DMs persist — no 24h filter for conversation list
     const { data, error } = await supabase
       .from('direct_messages')
       .select('*')
@@ -20,7 +19,6 @@ export const dmService = {
     if (error) throw error;
     const messages = (data ?? []) as unknown as DirectMessage[];
 
-    // Group by conversation partner
     const convMap = new Map<string, { messages: DirectMessage[]; unread: number }>();
     for (const msg of messages) {
       const otherId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
@@ -51,7 +49,6 @@ export const dmService = {
   },
 
   async getMessages(userId: string, otherUserId: string): Promise<DirectMessage[]> {
-    // DMs persist — no 24h filter
     const { data, error } = await supabase
       .from('direct_messages')
       .select('*')
@@ -71,7 +68,7 @@ export const dmService = {
   async sendMessage(senderId: string, receiverId: string, text: string): Promise<DirectMessage> {
     const { data, error } = await supabase
       .from('direct_messages')
-      .insert({ sender_id: senderId, receiver_id: receiverId, text_content: text } as any)
+      .insert({ sender_id: senderId, receiver_id: receiverId, text_content: text })
       .select('*')
       .single();
 
@@ -85,7 +82,7 @@ export const dmService = {
   async markAsRead(userId: string, otherUserId: string) {
     await supabase
       .from('direct_messages')
-      .update({ is_read: true } as any)
+      .update({ is_read: true })
       .eq('receiver_id', userId)
       .eq('sender_id', otherUserId)
       .eq('is_read', false);

@@ -21,6 +21,7 @@ export default function LoginPage() {
     setError('');
     try {
       await authService.signIn(email, password);
+      // Auth state change listener will handle navigation
     } catch (err: any) {
       setError(err.message ?? 'Sign in failed');
     } finally {
@@ -29,9 +30,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 page-enter">
       <div className="w-full max-w-sm">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 text-sm transition-colors">
+        <button onClick={() => navigate('/welcome')} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" />
           {t('auth.back')}
         </button>
