@@ -7,26 +7,29 @@ import { profileService } from '@/services/profileService';
 export function useAuthInit() {
   const { setSession, setUser, setProfile, setLoading, setInitialized } = useAuthStore();
   const initializedRef = useRef(false);
-  const loadingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadUserData(userId: string) {
-      // Prevent concurrent duplicate loads
-      if (loadingRef.current) return;
-      loadingRef.current = true;
+    async function loadUserData(userId: string, email?: string) {
       try {
         const [user, profile] = await Promise.all([
-          authService.getUser(userId),
-          profileService.getProfile(userId),
+          authService.getUser(userId).catch(() => null),
+          profileService.getProfile(userId).catch(() => null),
         ]);
         if (cancelled) return;
-        if (user) setUser(user);
+
+        // If no user record yet (trigger might be slow), create it
+        if (!user && email) {
+          const created = await authService.ensureUserRecord(userId, email);
+          if (!cancelled) setUser(created);
+        } else if (user) {
+          setUser(user);
+        }
+
         setProfile(profile);
       } catch (_) {
-      } finally {
-        loadingRef.current = false;
+        // Don't crash auth init on network errors
       }
     }
 
@@ -34,7 +37,7 @@ export function useAuthInit() {
       if (cancelled) return;
       setSession(session);
       if (session?.user) {
-        await loadUserData(session.user.id);
+        await loadUserData(session.user.id, session.user.email);
       }
       setLoading(false);
       setInitialized(true);
@@ -45,7 +48,6 @@ export function useAuthInit() {
       if (cancelled) return;
       if (!initializedRef.current) return;
 
-      // Only refetch on actual auth changes, not token refreshes
       if (event === 'TOKEN_REFRESHED') {
         setSession(session);
         return;
@@ -53,7 +55,7 @@ export function useAuthInit() {
 
       setSession(session);
       if (session?.user) {
-        await loadUserData(session.user.id);
+        await loadUserData(session.user.id, session.user.email);
       } else {
         setUser(null);
         setProfile(null);

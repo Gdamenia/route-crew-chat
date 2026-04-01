@@ -22,7 +22,9 @@ export default function SignupPage() {
     setError('');
     try {
       await authService.signUp(email, password);
-      setSuccess(true);
+      // Auto-confirm is enabled, so sign in immediately
+      await authService.signIn(email, password);
+      // Auth state change will handle navigation
     } catch (err: any) {
       setError(err.message ?? 'Signup failed');
     } finally {
@@ -30,18 +32,7 @@ export default function SignupPage() {
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
-        <div className="text-center w-full max-w-sm">
-          <p className="text-5xl mb-4">✅</p>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Check your email</h2>
-          <p className="text-muted-foreground text-sm mb-6">We sent a confirmation link to {email}. Click it to activate your account.</p>
-          <RouteButton size="lg" onClick={() => navigate('/login')}>Go to Sign In</RouteButton>
-        </div>
-      </div>
-    );
-  }
+  // No success screen needed — auto-login after signup
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
