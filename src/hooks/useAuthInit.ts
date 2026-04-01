@@ -7,6 +7,7 @@ import { useBlockStore } from '@/stores/blockStore';
 
 export function useAuthInit() {
   const { setSession, setUser, setProfile, setLoading, setInitialized } = useAuthStore();
+  const { loadBlocked } = useBlockStore();
   const initializedRef = useRef(false);
 
   useEffect(() => {
