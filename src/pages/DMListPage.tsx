@@ -11,6 +11,7 @@ import { SkeletonConversation } from '@/components/Skeletons';
 import { formatRelativeTime } from '@/lib/helpers';
 import { BottomNav } from '@/components/BottomNav';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import type { Conversation, UserStatus } from '@/lib/types';
 
 export default function DMListPage() {

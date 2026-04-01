@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { dmService } from '@/services/dmService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
+import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
-import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban } from 'lucide-react';
 import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface OptimisticDM {
   id: string;
