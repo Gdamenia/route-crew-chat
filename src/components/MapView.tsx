@@ -122,8 +122,13 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     if (!L) return;
 
     markersRef.current.forEach((marker, userId) => {
-      if (!nearbyDrivers.find((d) => d.user_id === userId)) {
+      if (!filteredDrivers.find((d) => d.user_id === userId)) {
         marker.remove();
+        markersRef.current.delete(userId);
+      }
+    });
+
+    filteredDrivers.forEach((driver) => {
         markersRef.current.delete(userId);
       }
     });
