@@ -14,7 +14,258 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      driver_presence: {
+        Row: {
+          current_route: string | null
+          heading: number | null
+          id: string
+          is_visible: boolean | null
+          last_seen_at: string | null
+          lat: number | null
+          lng: number | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          current_route?: string | null
+          heading?: number | null
+          id?: string
+          is_visible?: boolean | null
+          last_seen_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          current_route?: string | null
+          heading?: number | null
+          id?: string
+          is_visible?: boolean | null
+          last_seen_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_presence_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_name: string
+          dnd_enabled: boolean | null
+          id: string
+          photo_url: string | null
+          status: string | null
+          truck_type: string | null
+          user_id: string
+          visibility_mode: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          display_name: string
+          dnd_enabled?: boolean | null
+          id?: string
+          photo_url?: string | null
+          status?: string | null
+          truck_type?: string | null
+          user_id: string
+          visibility_mode?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string
+          dnd_enabled?: boolean | null
+          id?: string
+          photo_url?: string | null
+          status?: string | null
+          truck_type?: string | null
+          user_id?: string
+          visibility_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          reason: string
+          reporter_user_id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reason: string
+          reporter_user_id: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reason?: string
+          reporter_user_id?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_user_id_fkey"
+            columns: ["reporter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_channel_members: {
+        Row: {
+          channel_id: string
+          id: string
+          joined_at: string | null
+          muted: boolean | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          id?: string
+          joined_at?: string | null
+          muted?: boolean | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          id?: string
+          joined_at?: string | null
+          muted?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_channel_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "route_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_channel_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_channels: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          route_code: string
+          route_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          route_code: string
+          route_name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          route_code?: string
+          route_name?: string
+        }
+        Relationships: []
+      }
+      route_messages: {
+        Row: {
+          channel_id: string
+          created_at: string | null
+          id: string
+          sender_user_id: string
+          text_content: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string | null
+          id?: string
+          sender_user_id: string
+          text_content: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string | null
+          id?: string
+          sender_user_id?: string
+          text_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "route_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          language: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          language?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          language?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
