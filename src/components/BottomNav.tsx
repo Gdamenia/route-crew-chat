@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
-import { Map, MessageSquare, User } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Map, MessageSquare, User, MessageCircle } from 'lucide-react';
 
 const tabs = [
   { key: 'map', label: 'Map', path: '/', icon: Map },
   { key: 'channels', label: 'Channels', path: '/channels', icon: MessageSquare },
+  { key: 'messages', label: 'Messages', path: '/messages', icon: MessageCircle },
   { key: 'profile', label: 'Profile', path: '/profile', icon: User },
 ];
 

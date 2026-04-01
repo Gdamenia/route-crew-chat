@@ -57,7 +57,7 @@ export default function DMListPage() {
             >
               <div className="relative flex-shrink-0">
                 <AvatarDisplay name={conv.other_profile.display_name} photoUrl={conv.other_profile.photo_url} size="md" />
-                <StatusDot status={conv.other_profile.status as UserStatus} className="absolute -bottom-0.5 -right-0.5" />
+                <div className="absolute -bottom-0.5 -right-0.5"><StatusDot status={conv.other_profile.status as UserStatus} size="sm" /></div>
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center justify-between">
