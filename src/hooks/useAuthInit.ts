@@ -3,9 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
+import { useBlockStore } from '@/stores/blockStore';
 
 export function useAuthInit() {
   const { setSession, setUser, setProfile, setLoading, setInitialized } = useAuthStore();
+  const { loadBlocked } = useBlockStore();
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export function useAuthInit() {
         }
 
         setProfile(profile);
+        loadBlocked(userId);
       } catch (_) {
         // Don't crash auth init on network errors
       }

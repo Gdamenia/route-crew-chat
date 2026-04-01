@@ -2,11 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { channelService } from '@/services/channelService';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { useChannelStore } from '@/stores/channelStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
+import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
 import { ArrowLeft, Mic, Send, AlertTriangle, Clock, RotateCcw } from 'lucide-react';
 import type { RouteMessage } from '@/lib/types';
@@ -29,10 +32,13 @@ export default function ChatPage() {
   const { profile } = useAuthStore();
   const { t } = useTranslation();
   const { messages, setMessages, appendMessage } = useChannelStore();
+  const { isBlocked } = useBlockStore();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [optimistic, setOptimistic] = useState<OptimisticMessage[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTargetId, setReportTargetId] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDriving = profile?.status === 'driving';
@@ -127,7 +133,7 @@ export default function ChatPage() {
   };
 
   const allMessages = [
-    ...channelMessages.map((m) => ({ ...m, _type: 'real' as const })),
+    ...channelMessages.filter((m) => !isBlocked(m.sender_user_id)).map((m) => ({ ...m, _type: 'real' as const })),
     ...optimistic.map((m) => ({ ...m, _type: 'optimistic' as const })),
   ];
 
@@ -186,14 +192,21 @@ export default function ChatPage() {
             const optStatus = isOpt ? (msg as any).status : null;
 
             return (
-              <div key={msg.id} className={`flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div key={msg.id} className={`flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
+                onContextMenu={(e) => { if (!isOpt) { e.preventDefault(); setReportTargetId(msg.id); setReportOpen(true); } }}
+              >
                 {!isSelf && (
                   <div className={`flex-shrink-0 ${showAvatar ? 'opacity-100' : 'opacity-0'}`}>
                     <AvatarDisplay name={senderName} photoUrl={(msg as any).sender?.photo_url} size="sm" />
                   </div>
                 )}
                 <div className={`flex flex-col max-w-[72%] ${isSelf ? 'items-end' : 'items-start'}`}>
-                  {showAvatar && !isSelf && <p className="text-muted-foreground text-xs mb-1 px-1">{senderName}</p>}
+                  {showAvatar && !isSelf && (
+                    <div className="flex items-center gap-1 mb-1 px-1">
+                      <p className="text-muted-foreground text-xs">{senderName}</p>
+                      {(msg as any).sender?.is_verified && <VerifiedBadge />}
+                    </div>
+                  )}
                   <div
                     className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
                       optStatus === 'failed'
@@ -249,6 +262,7 @@ export default function ChatPage() {
           <Send className={isDriving ? 'w-5 h-5 text-primary-foreground' : 'w-4 h-4 text-primary-foreground'} />
         </button>
       </div>
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} targetType="message" targetId={reportTargetId} />
     </div>
   );
 }

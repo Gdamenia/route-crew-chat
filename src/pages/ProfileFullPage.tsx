@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { profileService } from '@/services/profileService';
 import { authService } from '@/services/authService';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -8,22 +9,35 @@ import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { RouteInput } from '@/components/ui/RouteInput';
 import { RouteButton } from '@/components/ui/RouteButton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { STATUS_OPTIONS, VISIBILITY_OPTIONS, TRUCK_TYPES } from '@/lib/constants';
-import type { UserStatus, VisibilityMode } from '@/lib/types';
-import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2 } from 'lucide-react';
+import type { UserStatus, VisibilityMode, DriverProfile } from '@/lib/types';
+import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function ProfileFullPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile, setProfile, reset } = useAuthStore();
+  const { blockedIds, unblockUser } = useBlockStore();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [truckType, setTruckType] = useState(profile?.truck_type ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [activeSection, setActiveSection] = useState<'profile' | 'status' | 'settings'>('profile');
+  const [blockedProfiles, setBlockedProfiles] = useState<DriverProfile[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (blockedIds.size === 0) { setBlockedProfiles([]); return; }
+    const ids = Array.from(blockedIds);
+    supabase.from('driver_profiles').select('*').in('user_id', ids).then(({ data }) => {
+      if (data) setBlockedProfiles(data as unknown as DriverProfile[]);
+    });
+  }, [blockedIds.size]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -101,7 +115,10 @@ export default function ProfileFullPage() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
         </div>
-        <p className="text-foreground font-bold text-lg mt-3">{profile.display_name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-foreground font-bold text-lg mt-3">{profile.display_name}</p>
+          {profile.is_verified && <VerifiedBadge size="md" />}
+        </div>
         <StatusBadge status={profile.status} showLabel size="md" />
       </div>
 
@@ -199,6 +216,37 @@ export default function ProfileFullPage() {
               <span className="flex-1 text-left text-foreground text-sm">{t('channels.title')}</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
+
+            {/* Blocked Users */}
+            <div className="bg-secondary border border-border rounded-xl p-3.5">
+              <div className="flex items-center gap-2 mb-3">
+                <Ban className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground text-sm font-medium">{t('block.blockedUsers')}</span>
+              </div>
+              {blockedProfiles.length === 0 ? (
+                <p className="text-muted-foreground text-xs">{t('block.noBlocked')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {blockedProfiles.map((bp) => (
+                    <div key={bp.user_id} className="flex items-center gap-3 p-2 bg-background rounded-lg">
+                      <AvatarDisplay name={bp.display_name} photoUrl={bp.photo_url} size="sm" />
+                      <span className="flex-1 text-foreground text-sm truncate">{bp.display_name}</span>
+                      <button
+                        onClick={async () => {
+                          if (!profile) return;
+                          await unblockUser(profile.user_id, bp.user_id);
+                          toast.success(t('block.unblocked'));
+                        }}
+                        className="text-xs text-primary font-medium px-2 py-1 min-h-[36px]"
+                      >
+                        {t('block.unblock')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-destructive transition-colors min-h-[48px]">
               <LogOut className="w-5 h-5 text-destructive" />
               <span className="flex-1 text-left text-destructive text-sm font-medium">{t('auth.signOut')}</span>

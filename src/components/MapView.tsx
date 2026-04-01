@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { presenceService } from '@/services/presenceService';
 import type { DriverWithProfile } from '@/lib/types';
 import { getStatusColor } from '@/lib/helpers';
@@ -13,6 +14,8 @@ interface MapViewProps {
 export function MapView({ onDriverSelect }: MapViewProps) {
   const { myLocation, nearbyDrivers, setNearbyDrivers, upsertNearbyDriver, removeNearbyDriver } = usePresenceStore();
   const { profile } = useAuthStore();
+  const { isBlocked } = useBlockStore();
+  const filteredDrivers = nearbyDrivers.filter((d) => !isBlocked(d.user_id));
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   const [mapLoaded, setMapLoaded] = useState(!!(window as any).L);
   const mapRef = useRef<any>(null);
@@ -119,13 +122,13 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     if (!L) return;
 
     markersRef.current.forEach((marker, userId) => {
-      if (!nearbyDrivers.find((d) => d.user_id === userId)) {
+      if (!filteredDrivers.find((d) => d.user_id === userId)) {
         marker.remove();
         markersRef.current.delete(userId);
       }
     });
 
-    nearbyDrivers.forEach((driver) => {
+    filteredDrivers.forEach((driver) => {
       if (driver.lat == null || driver.lng == null) return;
       const statusColor = getStatusColor(driver.status);
       const name = driver.driver_profiles?.display_name ?? '?';
@@ -149,7 +152,7 @@ export function MapView({ onDriverSelect }: MapViewProps) {
         markersRef.current.set(driver.user_id, marker);
       }
     });
-  }, [nearbyDrivers]);
+  }, [filteredDrivers]);
 
   return (
     <div className="relative w-full h-full min-h-[400px]">
