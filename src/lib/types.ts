@@ -1,7 +1,7 @@
 export type UserStatus = 'available' | 'driving' | 'resting' | 'dnd';
 export type VisibilityMode = 'visible_nearby' | 'visible_channels' | 'hidden';
 export type TargetType = 'user' | 'message';
-export type Language = 'en' | 'ru' | 'ka';
+export type Language = 'en' | 'ru' | 'ka' | 'es' | 'uk' | 'pl' | 'hi' | 'am';
 
 export interface AppUser {
   id: string;
