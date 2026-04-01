@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useBlockStore } from '@/stores/blockStore';
 import { profileService } from '@/services/profileService';
+import { haptic } from '@/lib/haptic';
 import { authService } from '@/services/authService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
