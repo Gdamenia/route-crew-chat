@@ -10,6 +10,7 @@ import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
+import { haptic } from '@/lib/haptic';
 import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban } from 'lucide-react';
 import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
