@@ -19,7 +19,15 @@ export const useChannelStore = create<ChannelState>((set) => ({
   setMessages: (channelId, messages) =>
     set((state) => ({ messages: { ...state.messages, [channelId]: messages } })),
   appendMessage: (channelId, msg) =>
-    set((state) => ({
-      messages: { ...state.messages, [channelId]: [...(state.messages[channelId] ?? []), msg] },
-    })),
+    set((state) => {
+      const existing = state.messages[channelId] ?? [];
+      if (existing.some((m) => m.id === msg.id)) return state;
+
+      return {
+        messages: {
+          ...state.messages,
+          [channelId]: [...existing, msg],
+        },
+      };
+    }),
 }));
