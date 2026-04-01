@@ -27,7 +27,7 @@ export function useChannels() {
       countMap[m.channel_id] = (countMap[m.channel_id] || 0) + 1;
     });
 
-    const memberMap = new Map(memberships?.map((m: { channel_id: string; muted: boolean | null }) => [m.channel_id, m]) || []);
+    const memberMap = new Map((memberships || []).map((m: { channel_id: string; muted: boolean | null }) => [m.channel_id, m] as const));
 
     setChannels(
       (channelsData || []).map((ch: any) => {
