@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { channelService } from '@/services/channelService';
 import { useAuthStore } from '@/stores/authStore';
 import { useChannelStore } from '@/stores/channelStore';
 import { usePresenceStore } from '@/stores/presenceStore';
 import type { RouteChannel } from '@/lib/types';
-import { ArrowLeft, RefreshCw, MessageSquare, Map, User, Radio, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw, MessageSquare, Radio, ChevronRight } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 
 export default function ChannelsListPage() {
@@ -13,9 +13,10 @@ export default function ChannelsListPage() {
   const { profile } = useAuthStore();
   const { channels, setChannels, updateChannel } = useChannelStore();
   const { myRoute } = usePresenceStore();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(channels.length === 0);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'joined' | 'all'>('joined');
+  const loadedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -27,7 +28,12 @@ export default function ChannelsListPage() {
     }
   }, [profile?.user_id]);
 
-  useEffect(() => { load(); }, [load]);
+  // Only fetch once on mount, or if store is empty
+  useEffect(() => {
+    if (loadedRef.current && channels.length > 0) return;
+    loadedRef.current = true;
+    load();
+  }, [load]);
 
   const handleJoinLeave = async (channel: RouteChannel & { is_member?: boolean }) => {
     if (!profile) return;
@@ -40,7 +46,6 @@ export default function ChannelsListPage() {
         await channelService.joinChannel(channel.id, profile.user_id);
         updateChannel({ ...channel, is_member: true } as any);
       }
-      await load();
     } finally {
       setTogglingId(null);
     }
@@ -53,18 +58,16 @@ export default function ChannelsListPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-lg font-black text-foreground tracking-tight flex-1">Route Channels</h1>
-        <button onClick={load} className="text-muted-foreground hover:text-primary">
+        <button onClick={() => { setLoading(true); load(); }} className="text-muted-foreground hover:text-primary">
           <RefreshCw className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-border bg-card">
         {[
           { key: 'joined', label: `My Channels${joinedChannels.length > 0 ? ` (${joinedChannels.length})` : ''}` },
@@ -79,7 +82,6 @@ export default function ChannelsListPage() {
         ))}
       </div>
 
-      {/* Channel list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading ? (
           <div className="flex justify-center pt-12">
