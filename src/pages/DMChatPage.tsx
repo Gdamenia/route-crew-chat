@@ -10,6 +10,7 @@ import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
+import { haptic } from '@/lib/haptic';
 import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban } from 'lucide-react';
 import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,6 +104,7 @@ export default function DMChatPage() {
 
   const sendText = async (content: string) => {
     if (!content.trim() || !profile || !resolvedOther) return;
+    haptic();
     const trimmed = content.trim();
     setText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
@@ -142,7 +144,7 @@ export default function DMChatPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/messages')} className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -205,7 +207,7 @@ export default function DMChatPage() {
             const optStatus = msg._status;
 
             return (
-              <div key={msg.id} className={`flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
+              <div key={msg.id} className={`msg-appear flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
                 onContextMenu={(e) => { if (!isOpt) { e.preventDefault(); setReportTargetId(msg.id); setReportTargetType('message'); setReportOpen(true); } }}
               >
                 {!isSelf && (
@@ -214,7 +216,7 @@ export default function DMChatPage() {
                   </div>
                 )}
                 <div className={`flex flex-col max-w-[72%] ${isSelf ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
                     optStatus === 'failed'
                       ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
                       : isSelf

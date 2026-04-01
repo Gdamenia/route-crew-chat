@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useBlockStore } from '@/stores/blockStore';
 import { profileService } from '@/services/profileService';
+import { haptic } from '@/lib/haptic';
 import { authService } from '@/services/authService';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
@@ -71,6 +72,7 @@ export default function ProfileFullPage() {
 
   const handleStatusChange = async (status: UserStatus) => {
     if (!profile) return;
+    haptic();
     await profileService.updateStatus(profile.user_id, status);
     setProfile({ ...profile, status, dnd_enabled: status === 'dnd' });
   };

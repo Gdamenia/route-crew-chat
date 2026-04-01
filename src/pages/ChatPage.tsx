@@ -11,6 +11,7 @@ import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
+import { haptic } from '@/lib/haptic';
 import { ArrowLeft, Mic, Send, AlertTriangle, Clock, RotateCcw } from 'lucide-react';
 import type { RouteMessage } from '@/lib/types';
 
@@ -94,6 +95,7 @@ export default function ChatPage() {
 
   const sendText = async (content: string) => {
     if (!content.trim() || !profile || !resolvedChannelId) return;
+    haptic();
     const trimmed = content.trim();
     setText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
@@ -138,7 +140,7 @@ export default function ChatPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/channels')} className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -192,7 +194,7 @@ export default function ChatPage() {
             const optStatus = isOpt ? (msg as any).status : null;
 
             return (
-              <div key={msg.id} className={`flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
+              <div key={msg.id} className={`msg-appear flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
                 onContextMenu={(e) => { if (!isOpt) { e.preventDefault(); setReportTargetId(msg.id); setReportOpen(true); } }}
               >
                 {!isSelf && (
@@ -208,7 +210,7 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div
-                    className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
+                    className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
                       optStatus === 'failed'
                         ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
                         : isSelf

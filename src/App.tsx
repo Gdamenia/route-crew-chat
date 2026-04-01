@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthStore } from "@/stores/authStore";
+import { Radio } from 'lucide-react';
 
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -21,22 +22,28 @@ const DMChatPage = lazy(() => import("./pages/DMChatPage"));
 
 const queryClient = new QueryClient();
 
-const LoadingSpinner = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+const SplashScreen = () => (
+  <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+    <div className="animate-pulse flex flex-col items-center gap-3">
+      <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+        <Radio className="w-8 h-8 text-primary" />
+      </div>
+      <h1 className="text-2xl font-black text-foreground tracking-tight">RouteLink</h1>
+    </div>
+    <p className="text-muted-foreground text-sm mt-2">Connecting...</p>
   </div>
 );
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, isInitialized } = useAuthStore();
-  if (!isInitialized) return <LoadingSpinner />;
+  if (!isInitialized) return <SplashScreen />;
   if (!session) return <Navigate to="/welcome" replace />;
   return <>{children}</>;
 }
 
 function RequireProfile({ children }: { children: React.ReactNode }) {
   const { session, profile, isInitialized } = useAuthStore();
-  if (!isInitialized) return <LoadingSpinner />;
+  if (!isInitialized) return <SplashScreen />;
   if (!session) return <Navigate to="/welcome" replace />;
   if (!profile) return <Navigate to="/create-profile" replace />;
   return <>{children}</>;
@@ -50,10 +57,10 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { session, profile, isInitialized } = useAuthStore();
 
-  if (!isInitialized) return <LoadingSpinner />;
+  if (!isInitialized) return <SplashScreen />;
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<SplashScreen />}>
       <Routes>
         <Route path="/welcome" element={session ? (profile ? <Navigate to="/" /> : <Navigate to="/create-profile" />) : <OnboardingPage />} />
         <Route path="/login" element={session ? <Navigate to="/" /> : <LoginPage />} />
