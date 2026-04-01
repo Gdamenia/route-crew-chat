@@ -14,11 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      channel_read_cursors: {
+        Row: {
+          channel_id: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           created_at: string
           id: string
           is_read: boolean
+          location_lat: number | null
+          location_lng: number | null
+          media_url: string | null
+          message_type: string | null
           receiver_id: string
           sender_id: string
           text_content: string
@@ -27,6 +70,10 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          media_url?: string | null
+          message_type?: string | null
           receiver_id: string
           sender_id: string
           text_content: string
@@ -35,6 +82,10 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          media_url?: string | null
+          message_type?: string | null
           receiver_id?: string
           sender_id?: string
           text_content?: string
@@ -92,6 +143,7 @@ export type Database = {
           display_name: string
           dnd_enabled: boolean | null
           id: string
+          is_verified: boolean | null
           photo_url: string | null
           status: string | null
           truck_type: string | null
@@ -104,6 +156,7 @@ export type Database = {
           display_name: string
           dnd_enabled?: boolean | null
           id?: string
+          is_verified?: boolean | null
           photo_url?: string | null
           status?: string | null
           truck_type?: string | null
@@ -116,6 +169,7 @@ export type Database = {
           display_name?: string
           dnd_enabled?: boolean | null
           id?: string
+          is_verified?: boolean | null
           photo_url?: string | null
           status?: string | null
           truck_type?: string | null
@@ -238,6 +292,10 @@ export type Database = {
           channel_id: string
           created_at: string | null
           id: string
+          location_lat: number | null
+          location_lng: number | null
+          media_url: string | null
+          message_type: string | null
           sender_user_id: string
           text_content: string
         }
@@ -245,6 +303,10 @@ export type Database = {
           channel_id: string
           created_at?: string | null
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          media_url?: string | null
+          message_type?: string | null
           sender_user_id: string
           text_content: string
         }
@@ -252,6 +314,10 @@ export type Database = {
           channel_id?: string
           created_at?: string | null
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          media_url?: string | null
+          message_type?: string | null
           sender_user_id?: string
           text_content?: string
         }
