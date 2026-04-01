@@ -21,13 +21,23 @@ export default function ProfileFullPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile, setProfile, reset } = useAuthStore();
+  const { blockedIds, unblockUser } = useBlockStore();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [truckType, setTruckType] = useState(profile?.truck_type ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [activeSection, setActiveSection] = useState<'profile' | 'status' | 'settings'>('profile');
+  const [blockedProfiles, setBlockedProfiles] = useState<DriverProfile[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (blockedIds.size === 0) { setBlockedProfiles([]); return; }
+    const ids = Array.from(blockedIds);
+    supabase.from('driver_profiles').select('*').in('user_id', ids).then(({ data }) => {
+      if (data) setBlockedProfiles(data as unknown as DriverProfile[]);
+    });
+  }, [blockedIds.size]);
 
   const handleSave = async () => {
     if (!profile) return;
