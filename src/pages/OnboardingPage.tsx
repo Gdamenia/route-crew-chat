@@ -30,8 +30,8 @@ export default function OnboardingPage() {
         </div>
 
         <div className="space-y-3">
-          <RouteButton size="lg" onClick={() => navigate('/auth')}>Get Started</RouteButton>
-          <RouteButton size="lg" variant="ghost" onClick={() => navigate('/auth')}>Already a driver? Sign In</RouteButton>
+          <RouteButton size="lg" onClick={() => navigate('/signup')}>Get Started</RouteButton>
+          <RouteButton size="lg" variant="ghost" onClick={() => navigate('/login')}>Already a driver? Sign In</RouteButton>
         </div>
       </div>
     </div>
