@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      direct_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          receiver_id: string
+          sender_id: string
+          text_content: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id: string
+          sender_id: string
+          text_content: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id?: string
+          sender_id?: string
+          text_content?: string
+        }
+        Relationships: []
+      }
       driver_presence: {
         Row: {
           current_route: string | null

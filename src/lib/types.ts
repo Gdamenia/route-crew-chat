@@ -56,3 +56,20 @@ export interface RouteMessage {
   created_at: string;
   sender?: DriverProfile;
 }
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  text_content: string;
+  is_read: boolean;
+  created_at: string;
+  sender?: DriverProfile;
+}
+
+export interface Conversation {
+  other_user_id: string;
+  other_profile: DriverProfile;
+  last_message: DirectMessage;
+  unread_count: number;
+}
