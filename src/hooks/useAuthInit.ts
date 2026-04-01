@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
+import { useBlockStore } from '@/stores/blockStore';
 
 export function useAuthInit() {
   const { setSession, setUser, setProfile, setLoading, setInitialized } = useAuthStore();
