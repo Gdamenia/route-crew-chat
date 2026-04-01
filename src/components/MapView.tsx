@@ -14,6 +14,8 @@ interface MapViewProps {
 export function MapView({ onDriverSelect }: MapViewProps) {
   const { myLocation, nearbyDrivers, setNearbyDrivers, upsertNearbyDriver, removeNearbyDriver } = usePresenceStore();
   const { profile } = useAuthStore();
+  const { isBlocked } = useBlockStore();
+  const filteredDrivers = nearbyDrivers.filter((d) => !isBlocked(d.user_id));
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   const [mapLoaded, setMapLoaded] = useState(!!(window as any).L);
   const mapRef = useRef<any>(null);
