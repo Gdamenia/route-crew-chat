@@ -37,6 +37,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [optimistic, setOptimistic] = useState<OptimisticMessage[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTargetId, setReportTargetId] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDriving = profile?.status === 'driving';
