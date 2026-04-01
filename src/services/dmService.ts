@@ -9,14 +9,13 @@ const loadProfilesMap = async (userIds: string[]) => {
 
 export const dmService = {
   async getConversations(userId: string): Promise<Conversation[]> {
-    const twentyFourAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
+    // DMs persist — no 24h filter for conversation list
     const { data, error } = await supabase
       .from('direct_messages')
       .select('*')
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .gte('created_at', twentyFourAgo)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error) throw error;
     const messages = (data ?? []) as unknown as DirectMessage[];
@@ -52,16 +51,15 @@ export const dmService = {
   },
 
   async getMessages(userId: string, otherUserId: string): Promise<DirectMessage[]> {
-    const twentyFourAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
+    // DMs persist — no 24h filter
     const { data, error } = await supabase
       .from('direct_messages')
       .select('*')
       .or(
         `and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`
       )
-      .gte('created_at', twentyFourAgo)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(500);
 
     if (error) throw error;
 

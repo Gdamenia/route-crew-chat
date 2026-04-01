@@ -1,26 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { type RealtimeChannel } from '@supabase/supabase-js';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Mic, MicOff, PhoneOff, Radio, AlertTriangle } from 'lucide-react';
 
-type VoicePresencePayload = {
-  user_id?: string;
-  display_name?: string;
-};
-
-type VoiceSignalPayload = {
-  from: string;
-  to: string;
-  description?: RTCSessionDescriptionInit;
-  candidate?: RTCIceCandidateInit;
-};
-
-type Participant = {
-  userId: string;
-  displayName: string;
-};
+type VoicePresencePayload = { user_id?: string; display_name?: string };
+type VoiceSignalPayload = { from: string; to: string; description?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
+type Participant = { userId: string; displayName: string };
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
 
@@ -44,8 +31,12 @@ export default function VoiceRoomPage() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
+  const participantsRef = useRef<Participant[]>([]);
 
-  const syncParticipantsFromPresence = () => {
+  // Keep ref in sync with state
+  useEffect(() => { participantsRef.current = participants; }, [participants]);
+
+  const syncParticipantsFromPresence = useCallback(() => {
     const channel = channelRef.current;
     if (!channel || !userId) return;
 
@@ -55,24 +46,17 @@ export default function VoiceRoomPage() {
 
     for (const item of flat) {
       if (!item.user_id) continue;
-      map.set(item.user_id, {
-        userId: item.user_id,
-        displayName: item.display_name || 'Driver',
-      });
+      map.set(item.user_id, { userId: item.user_id, displayName: item.display_name || 'Driver' });
     }
 
     if (!map.has(userId)) {
-      map.set(userId, {
-        userId,
-        displayName: profile?.display_name || 'You',
-      });
+      map.set(userId, { userId, displayName: profile?.display_name || 'You' });
     }
 
     const participantList = [...map.values()];
     setParticipants(participantList);
 
     const activeRemoteIds = participantList.map((p) => p.userId).filter((id) => id !== userId);
-
     for (const existingPeerId of peerConnectionsRef.current.keys()) {
       if (!activeRemoteIds.includes(existingPeerId)) {
         const existing = peerConnectionsRef.current.get(existingPeerId);
@@ -86,19 +70,14 @@ export default function VoiceRoomPage() {
         });
       }
     }
-  };
+  }, [userId, profile?.display_name]);
 
-  const sendSignal = async (event: 'offer' | 'answer' | 'ice-candidate', payload: VoiceSignalPayload) => {
+  const sendSignal = useCallback(async (event: 'offer' | 'answer' | 'ice-candidate', payload: VoiceSignalPayload) => {
     if (!channelRef.current) return;
+    await channelRef.current.send({ type: 'broadcast', event, payload });
+  }, []);
 
-    await channelRef.current.send({
-      type: 'broadcast',
-      event,
-      payload,
-    });
-  };
-
-  const createPeerConnection = (remoteUserId: string) => {
+  const createPeerConnection = useCallback((remoteUserId: string) => {
     const existing = peerConnectionsRef.current.get(remoteUserId);
     if (existing) return existing;
 
@@ -112,22 +91,13 @@ export default function VoiceRoomPage() {
 
     peer.onicecandidate = async (event) => {
       if (!event.candidate || !userId) return;
-
-      await sendSignal('ice-candidate', {
-        from: userId,
-        to: remoteUserId,
-        candidate: event.candidate.toJSON(),
-      });
+      await sendSignal('ice-candidate', { from: userId, to: remoteUserId, candidate: event.candidate.toJSON() });
     };
 
     peer.ontrack = (event) => {
       const [stream] = event.streams;
       if (!stream) return;
-
-      setRemoteStreams((prev) => {
-        if (prev[remoteUserId] === stream) return prev;
-        return { ...prev, [remoteUserId]: stream };
-      });
+      setRemoteStreams((prev) => prev[remoteUserId] === stream ? prev : { ...prev, [remoteUserId]: stream });
     };
 
     peer.onconnectionstatechange = () => {
@@ -139,93 +109,77 @@ export default function VoiceRoomPage() {
 
     peerConnectionsRef.current.set(remoteUserId, peer);
     return peer;
-  };
+  }, [userId, sendSignal]);
 
-  const createAndSendOffer = async (remoteUserId: string) => {
+  const createAndSendOffer = useCallback(async (remoteUserId: string) => {
     if (!userId) return;
-
     const peer = createPeerConnection(remoteUserId);
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
+    await sendSignal('offer', { from: userId, to: remoteUserId, description: offer });
+  }, [userId, createPeerConnection, sendSignal]);
 
-    await sendSignal('offer', {
-      from: userId,
-      to: remoteUserId,
-      description: offer,
-    });
-  };
-
-  const ensureMeshConnections = async () => {
+  const ensureMeshConnections = useCallback(async () => {
     if (!userId) return;
-
-    const remoteIds = participants.map((p) => p.userId).filter((id) => id !== userId);
-
+    const currentParticipants = participantsRef.current;
+    const remoteIds = currentParticipants.map((p) => p.userId).filter((id) => id !== userId);
     for (const remoteId of remoteIds) {
       if (peerConnectionsRef.current.has(remoteId)) continue;
       if (userId < remoteId) {
         await createAndSendOffer(remoteId);
       }
     }
-  };
+  }, [userId, createAndSendOffer]);
 
-  const handleIncomingOffer = async (payload: VoiceSignalPayload) => {
+  const handleIncomingOffer = useCallback(async (payload: VoiceSignalPayload) => {
     if (!userId || payload.to !== userId || !payload.description) return;
-
     const peer = createPeerConnection(payload.from);
     await peer.setRemoteDescription(new RTCSessionDescription(payload.description));
-
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
+    await sendSignal('answer', { from: userId, to: payload.from, description: answer });
+  }, [userId, createPeerConnection, sendSignal]);
 
-    await sendSignal('answer', {
-      from: userId,
-      to: payload.from,
-      description: answer,
-    });
-  };
-
-  const handleIncomingAnswer = async (payload: VoiceSignalPayload) => {
+  const handleIncomingAnswer = useCallback(async (payload: VoiceSignalPayload) => {
     if (!userId || payload.to !== userId || !payload.description) return;
-
     const peer = peerConnectionsRef.current.get(payload.from);
     if (!peer) return;
-
     await peer.setRemoteDescription(new RTCSessionDescription(payload.description));
-  };
+  }, [userId]);
 
-  const handleIncomingCandidate = async (payload: VoiceSignalPayload) => {
+  const handleIncomingCandidate = useCallback(async (payload: VoiceSignalPayload) => {
     if (!userId || payload.to !== userId || !payload.candidate) return;
-
     const peer = peerConnectionsRef.current.get(payload.from);
     if (!peer) return;
-
     await peer.addIceCandidate(new RTCIceCandidate(payload.candidate));
-  };
+  }, [userId]);
 
-  const cleanupVoice = () => {
+  const cleanupVoice = useCallback(() => {
     if (channelRef.current) {
       channelRef.current.untrack();
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
-
-    for (const peer of peerConnectionsRef.current.values()) {
-      peer.close();
-    }
-
+    for (const peer of peerConnectionsRef.current.values()) peer.close();
     peerConnectionsRef.current.clear();
-
     if (localStreamRef.current) {
-      for (const track of localStreamRef.current.getTracks()) {
-        track.stop();
-      }
+      for (const track of localStreamRef.current.getTracks()) track.stop();
       localStreamRef.current = null;
     }
-
     setRemoteStreams({});
     setParticipants([]);
     setIsConnected(false);
-  };
+  }, []);
+
+  // Cleanup on unmount + beforeunload
+  useEffect(() => {
+    const handleBeforeUnload = () => cleanupVoice();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupVoice();
+    };
+  }, [cleanupVoice]);
 
   const handleJoin = async () => {
     if (!channelId || !userId) {
@@ -241,10 +195,7 @@ export default function VoiceRoomPage() {
       localStreamRef.current = localStream;
 
       const voiceChannel = supabase.channel(`voice:${channelId}`, {
-        config: {
-          broadcast: { self: false },
-          presence: { key: userId },
-        },
+        config: { broadcast: { self: false }, presence: { key: userId } },
       });
 
       channelRef.current = voiceChannel;
@@ -259,30 +210,21 @@ export default function VoiceRoomPage() {
         .on('broadcast', { event: 'ice-candidate' }, ({ payload }) => {
           void handleIncomingCandidate(payload as VoiceSignalPayload).catch(() => setError('Voice signaling issue (network).'));
         })
-        .on('presence', { event: 'sync' }, () => {
-          syncParticipantsFromPresence();
-        })
+        .on('presence', { event: 'sync' }, () => syncParticipantsFromPresence())
         .on('presence', { event: 'join' }, () => {
           syncParticipantsFromPresence();
           void ensureMeshConnections().catch(() => setError('Failed to connect to another participant.'));
         })
-        .on('presence', { event: 'leave' }, () => {
-          syncParticipantsFromPresence();
-        });
+        .on('presence', { event: 'leave' }, () => syncParticipantsFromPresence());
 
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(() => reject(new Error('Voice room connection timeout')), 12000);
-
         voiceChannel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             window.clearTimeout(timeout);
-            await voiceChannel.track({
-              user_id: userId,
-              display_name: profile?.display_name || 'Driver',
-            });
+            await voiceChannel.track({ user_id: userId, display_name: profile?.display_name || 'Driver' });
             resolve();
           }
-
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             window.clearTimeout(timeout);
             reject(new Error(`Voice room subscribe failed (${status})`));
@@ -301,34 +243,20 @@ export default function VoiceRoomPage() {
     }
   };
 
-  const handleLeave = () => {
-    cleanupVoice();
-    navigate(-1);
-  };
+  const handleLeave = () => { cleanupVoice(); navigate(-1); };
 
   const handleToggleMute = () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
-
     if (localStreamRef.current) {
-      for (const track of localStreamRef.current.getAudioTracks()) {
-        track.enabled = !nextMuted;
-      }
+      for (const track of localStreamRef.current.getAudioTracks()) track.enabled = !nextMuted;
     }
   };
 
   useEffect(() => {
-    return () => {
-      cleanupVoice();
-    };
-  }, []);
-
-  useEffect(() => {
     for (const [remoteId, stream] of Object.entries(remoteStreams)) {
       const audio = audioRefs.current[remoteId];
-      if (audio && audio.srcObject !== stream) {
-        audio.srcObject = stream;
-      }
+      if (audio && audio.srcObject !== stream) audio.srcObject = stream;
     }
   }, [remoteStreams]);
 
@@ -352,11 +280,9 @@ export default function VoiceRoomPage() {
           </div>
         )}
 
-        <div
-          className={`w-28 h-28 rounded-full flex items-center justify-center border-2 transition-all ${
-            isConnected ? 'border-primary bg-primary/10' : 'border-border bg-secondary'
-          }`}
-        >
+        <div className={`w-28 h-28 rounded-full flex items-center justify-center border-2 transition-all ${
+          isConnected ? 'border-primary bg-primary/10' : 'border-border bg-secondary'
+        }`}>
           <Mic className={`w-12 h-12 ${isConnected ? 'text-primary' : 'text-muted-foreground'}`} />
         </div>
 
@@ -371,7 +297,6 @@ export default function VoiceRoomPage() {
               {participants.map((participant) => {
                 const isSelf = participant.userId === userId;
                 const connected = isSelf || Boolean(remoteStreams[participant.userId]);
-
                 return (
                   <div key={participant.userId} className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -409,7 +334,6 @@ export default function VoiceRoomPage() {
                 {isMuted ? 'Unmute' : 'Mute'}
               </span>
             </button>
-
             <button
               onClick={handleLeave}
               className="flex flex-col items-center gap-1 w-20 py-4 rounded-2xl bg-destructive/10 border border-destructive transition-colors hover:bg-destructive/20"
@@ -441,9 +365,7 @@ export default function VoiceRoomPage() {
           playsInline
           ref={(node) => {
             audioRefs.current[remoteUserId] = node;
-            if (node && node.srcObject !== stream) {
-              node.srcObject = stream;
-            }
+            if (node && node.srcObject !== stream) node.srcObject = stream;
           }}
           className="hidden"
         />
