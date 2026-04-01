@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { dmService } from '@/services/dmService';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { formatChatTime } from '@/lib/helpers';
 import { ArrowLeft, Send, AlertTriangle, ShieldAlert } from 'lucide-react';
-import type { DirectMessage } from '@/lib/types';
+import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
-import type { DriverProfile } from '@/lib/types';
 
 export default function DMChatPage() {
   const navigate = useNavigate();
@@ -22,6 +21,7 @@ export default function DMChatPage() {
   const [error, setError] = useState('');
   const [otherProfile, setOtherProfile] = useState<DriverProfile | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const resolvedOther = otherUserId ?? '';
 
@@ -31,6 +31,13 @@ export default function DMChatPage() {
     });
   };
 
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+  }, []);
+
   // Load other user's profile
   useEffect(() => {
     if (!resolvedOther) return;
@@ -38,7 +45,7 @@ export default function DMChatPage() {
       .then(({ data }) => { if (data) setOtherProfile(data as unknown as DriverProfile); });
   }, [resolvedOther]);
 
-  // Load messages
+  // Load messages — NO 24h filter for DMs
   useEffect(() => {
     if (!profile || !resolvedOther) return;
     let mounted = true;
@@ -50,10 +57,8 @@ export default function DMChatPage() {
       scrollToBottom();
     }).catch(() => { if (mounted) { setLoading(false); setError('Failed to load messages'); } });
 
-    // Mark as read
     dmService.markAsRead(profile.user_id, resolvedOther);
 
-    // Subscribe
     const unsub = dmService.subscribeToDMs(profile.user_id, (msg) => {
       if (
         (msg.sender_id === resolvedOther && msg.receiver_id === profile.user_id) ||
@@ -78,15 +83,12 @@ export default function DMChatPage() {
     if (!text.trim() || !profile || !resolvedOther || sending) return;
     const trimmed = text.trim();
     setText('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setSending(true);
     setError('');
     try {
-      const msg = await dmService.sendMessage(profile.user_id, resolvedOther, trimmed);
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
-      scrollToBottom(true);
+      // Let realtime subscription handle appending — don't add locally
+      await dmService.sendMessage(profile.user_id, resolvedOther, trimmed);
     } catch {
       setText(trimmed);
       setError('Message failed to send');
@@ -175,8 +177,9 @@ export default function DMChatPage() {
       {/* Input */}
       <div className="flex-shrink-0 flex items-end gap-3 px-4 py-3 bg-card border-t border-border">
         <textarea
+          ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); autoResize(); }}
           onKeyDown={handleKeyDown}
           placeholder={isDnd ? 'Message (delivered silently)...' : 'Message...'}
           rows={1}

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { channelService } from '@/services/channelService';
 import { useAuthStore } from '@/stores/authStore';
 import { useChannelStore } from '@/stores/channelStore';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { formatChatTime } from '@/lib/helpers';
-import { ArrowLeft, Mic, Send, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Mic, Send, AlertTriangle, Clock } from 'lucide-react';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const resolvedChannelId = channelId ?? '';
   const channelMessages = messages[resolvedChannelId] ?? [];
@@ -28,6 +29,13 @@ export default function ChatPage() {
       bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
     });
   };
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+  }, []);
 
   useEffect(() => {
     if (!resolvedChannelId) return;
@@ -80,13 +88,13 @@ export default function ChatPage() {
 
     const trimmed = text.trim();
     setText('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setSending(true);
     setError('');
 
     try {
-      const newMessage = await channelService.sendMessage(resolvedChannelId, profile.user_id, trimmed);
-      appendMessage(resolvedChannelId, newMessage);
-      scrollToBottom(true);
+      // Let realtime subscription handle appending — don't appendMessage locally
+      await channelService.sendMessage(resolvedChannelId, profile.user_id, trimmed);
     } catch {
       setText(trimmed);
       setError('Message failed to send. Check your connection and try again.');
@@ -127,6 +135,12 @@ export default function ChatPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {/* 24h banner */}
+        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl px-3 py-2">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <p className="text-muted-foreground text-xs">Showing messages from the last 24 hours</p>
+        </div>
+
         {error && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
@@ -183,8 +197,9 @@ export default function ChatPage() {
 
       <div className="flex-shrink-0 flex items-end gap-3 px-4 py-3 bg-card border-t border-border">
         <textarea
+          ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); autoResize(); }}
           onKeyDown={handleKeyDown}
           placeholder="Message..."
           rows={1}
