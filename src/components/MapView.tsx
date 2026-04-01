@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { presenceService } from '@/services/presenceService';
@@ -17,10 +17,13 @@ export function MapView({ onDriverSelect }: MapViewProps) {
   const [mapLoaded, setMapLoaded] = useState(!!(window as any).L);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const myMarkerRef = useRef<any>(null);
+  const myCircleRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const lastFetchRef = useRef<string>('');
+  const hasInitialView = useRef(false);
 
-  // Load Leaflet dynamically (only once)
+  // Load Leaflet dynamically
   useEffect(() => {
     if ((window as any).L) { setMapLoaded(true); return; }
     const link = document.createElement('link');
@@ -45,14 +48,51 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current);
   }, [mapLoaded]);
 
-  // Center on user location
+  // Center on user location (only first time)
   useEffect(() => {
-    if (mapRef.current && myLocation) {
-      mapRef.current.setView([myLocation.lat, myLocation.lng], 10, { animate: true });
+    if (mapRef.current && myLocation && !hasInitialView.current) {
+      mapRef.current.setView([myLocation.lat, myLocation.lng], 12, { animate: true });
+      hasInitialView.current = true;
     }
   }, [myLocation?.lat, myLocation?.lng]);
 
-  // Load nearby drivers - debounced by rounding to ~1km grid
+  // Show MY location marker (blue pulsing dot)
+  useEffect(() => {
+    if (!mapRef.current || !myLocation) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const myIconHtml = `
+      <div style="position:relative;width:20px;height:20px;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:hsl(var(--primary));opacity:0.3;animation:pulse 2s infinite;"></div>
+        <div style="position:absolute;inset:4px;border-radius:50%;background:hsl(var(--primary));border:2px solid #fff;"></div>
+      </div>
+    `;
+    const myIcon = L.divIcon({ html: myIconHtml, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
+
+    if (myMarkerRef.current) {
+      myMarkerRef.current.setLatLng([myLocation.lat, myLocation.lng]);
+    } else {
+      myMarkerRef.current = L.marker([myLocation.lat, myLocation.lng], { icon: myIcon, zIndexOffset: 1000 }).addTo(mapRef.current);
+      myMarkerRef.current.bindPopup('<b>You are here</b>');
+    }
+
+    // Accuracy circle
+    if (myCircleRef.current) {
+      myCircleRef.current.setLatLng([myLocation.lat, myLocation.lng]);
+    } else {
+      myCircleRef.current = L.circle([myLocation.lat, myLocation.lng], {
+        radius: 500,
+        color: 'hsl(var(--primary))',
+        fillColor: 'hsl(var(--primary))',
+        fillOpacity: 0.08,
+        weight: 1,
+        opacity: 0.3,
+      }).addTo(mapRef.current);
+    }
+  }, [myLocation?.lat, myLocation?.lng]);
+
+  // Load nearby drivers
   useEffect(() => {
     if (!myLocation || !profile) return;
     const key = `${myLocation.lat.toFixed(2)},${myLocation.lng.toFixed(2)}`;
@@ -72,7 +112,7 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     );
   }, [profile?.user_id]);
 
-  // Render markers
+  // Render nearby driver markers
   useEffect(() => {
     if (!mapRef.current) return;
     const L = (window as any).L;
@@ -90,10 +130,11 @@ export function MapView({ onDriverSelect }: MapViewProps) {
       const statusColor = getStatusColor(driver.status);
       const name = driver.driver_profiles?.display_name ?? '?';
       const initial = name.charAt(0).toUpperCase();
+      const isDnd = driver.driver_profiles?.dnd_enabled || driver.status === 'dnd';
       const iconHtml = `
         <div style="display:flex;flex-direction:column;align-items:center;">
-          <div style="width:38px;height:38px;border-radius:50%;background:${statusColor};display:flex;align-items:center;justify-content:center;font-weight:bold;color:#0A0C0F;font-size:16px;border:2px solid #0A0C0F;">${initial}</div>
-          <div style="background:#1A1D24;border:1px solid #2E3340;border-radius:4px;padding:1px 6px;margin-top:2px;font-size:10px;color:#F0F2F5;white-space:nowrap;">${name}</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:${statusColor};display:flex;align-items:center;justify-content:center;font-weight:bold;color:#0A0C0F;font-size:16px;border:2px solid #0A0C0F;${isDnd ? 'opacity:0.6;' : ''}">${initial}</div>
+          <div style="background:#1A1D24;border:1px solid #2E3340;border-radius:4px;padding:1px 6px;margin-top:2px;font-size:10px;color:#F0F2F5;white-space:nowrap;">${name}${isDnd ? ' 🔕' : ''}</div>
         </div>
       `;
       const icon = L.divIcon({ html: iconHtml, className: '', iconAnchor: [19, 19] });

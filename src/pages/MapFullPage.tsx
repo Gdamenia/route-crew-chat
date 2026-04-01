@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import type { DriverWithProfile } from '@/lib/types';
-import { Map, MessageSquare, User } from 'lucide-react';
+import { Map, MessageSquare, User, MessageCircle } from 'lucide-react';
 
 export default function MapFullPage() {
   const navigate = useNavigate();
@@ -15,9 +15,13 @@ export default function MapFullPage() {
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   useGeolocation(true);
 
+  const handleDriverSelect = (driver: DriverWithProfile) => {
+    // Navigate to DM with this driver
+    navigate(`/dm/${driver.user_id}`, { state: { name: driver.driver_profiles?.display_name } });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Top bar */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border z-10">
         <div>
           <span className="text-foreground font-black text-lg tracking-tight">RouteLink</span>
@@ -37,21 +41,23 @@ export default function MapFullPage() {
           <button onClick={() => navigate('/channels')} className="p-2 bg-secondary border border-border rounded-lg hover:border-primary transition-colors">
             <MessageSquare className="w-5 h-5 text-muted-foreground" />
           </button>
+          <button onClick={() => navigate('/messages')} className="p-2 bg-secondary border border-border rounded-lg hover:border-primary transition-colors">
+            <MessageCircle className="w-5 h-5 text-muted-foreground" />
+          </button>
           <button onClick={() => navigate('/profile')} className="p-0.5 bg-primary rounded-full">
             {profile && <AvatarDisplay name={profile.display_name} photoUrl={profile.photo_url} size="sm" />}
           </button>
         </div>
       </div>
 
-      {/* Map */}
       <div className="flex-1 relative">
-        <MapView onDriverSelect={setSelectedDriver} />
+        <MapView onDriverSelect={handleDriverSelect} />
 
-        {/* Bottom tab bar */}
         <div className="absolute bottom-0 left-0 right-0 flex bg-card/95 border-t border-border backdrop-blur-sm z-50">
           {[
             { label: 'Map', icon: Map, active: true, path: '/' },
             { label: 'Channels', icon: MessageSquare, active: false, path: '/channels' },
+            { label: 'Messages', icon: MessageCircle, active: false, path: '/messages' },
             { label: 'Profile', icon: User, active: false, path: '/profile' },
           ].map((tab) => (
             <button key={tab.label} onClick={() => navigate(tab.path)}
