@@ -216,7 +216,7 @@ export default function DMChatPage() {
                   </div>
                 )}
                 <div className={`flex flex-col max-w-[72%] ${isSelf ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
                     optStatus === 'failed'
                       ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
                       : isSelf
