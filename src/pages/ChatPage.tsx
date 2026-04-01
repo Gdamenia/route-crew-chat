@@ -210,7 +210,7 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div
-                    className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
+                    className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
                       optStatus === 'failed'
                         ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
                         : isSelf
