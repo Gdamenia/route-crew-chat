@@ -7,7 +7,7 @@ import { useBlockStore } from '@/stores/blockStore';
 
 export function useAuthInit() {
   const { setSession, setUser, setProfile, setLoading, setInitialized } = useAuthStore();
-  const { loadBlocked } = useBlockStore();
+  const loadBlocked = useBlockStore((s) => s.loadBlocked);
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -21,7 +21,6 @@ export function useAuthInit() {
         ]);
         if (cancelled) return;
 
-        // If no user record yet (trigger might be slow), create it
         if (!user && email) {
           const created = await authService.ensureUserRecord(userId, email);
           if (!cancelled) setUser(created);
