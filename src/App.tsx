@@ -41,8 +41,12 @@ function RequireProfile({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppRoutes() {
+function AuthInitializer({ children }: { children: React.ReactNode }) {
   useAuthInit();
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   const { session, profile, isInitialized } = useAuthStore();
 
   if (!isInitialized) return <LoadingSpinner />;
