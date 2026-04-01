@@ -1,46 +1,52 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { dmService } from '@/services/dmService';
 import { useUnreadStore } from '@/stores/unreadStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { StatusDot } from '@/components/StatusDot';
 import { DrivingBanner } from '@/components/DrivingBanner';
 import { SkeletonConversation } from '@/components/Skeletons';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { formatRelativeTime } from '@/lib/helpers';
 import { BottomNav } from '@/components/BottomNav';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
-import { VerifiedBadge } from '@/components/VerifiedBadge';
 import type { Conversation, UserStatus } from '@/lib/types';
 
 export default function DMListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile } = useAuthStore();
+  const { isBlocked } = useBlockStore();
   const { setUnreadDMs } = useUnreadStore();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchConversations = async () => {
+    if (!profile) return;
+    const convs = await dmService.getConversations(profile.user_id);
+    setConversations(convs);
+    setUnreadDMs(convs.reduce((sum, c) => sum + c.unread_count, 0));
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!profile) return;
-    dmService.getConversations(profile.user_id).then((convs) => {
-      setConversations(convs);
-      setUnreadDMs(convs.reduce((sum, c) => sum + c.unread_count, 0));
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    fetchConversations();
 
     const unsub = dmService.subscribeToDMs(profile.user_id, () => {
-      dmService.getConversations(profile.user_id).then((convs) => {
-        setConversations(convs);
-        setUnreadDMs(convs.reduce((sum, c) => sum + c.unread_count, 0));
-      });
+      fetchConversations();
     });
     return unsub;
   }, [profile?.user_id]);
 
+  const filteredConvs = conversations.filter((c) => !isBlocked(c.other_user_id));
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground">
@@ -49,17 +55,17 @@ export default function DMListPage() {
         <h1 className="text-foreground font-bold text-lg">{t('nav.messages')}</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={fetchConversations}>
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonConversation key={i} />)
-        ) : conversations.length === 0 ? (
-          <div className="text-center pt-16 px-4">
+        ) : filteredConvs.length === 0 ? (
+          <div className="text-center pt-16 px-6">
             <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">{t('dm.noMessages')}</p>
-            <p className="text-muted-foreground text-sm mt-1">{t('dm.tapDriver')}</p>
+            <p className="text-foreground font-semibold mb-1">{t('dm.noMessages')}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">{t('dm.tapDriver')}</p>
           </div>
         ) : (
-          conversations.map((conv) => (
+          filteredConvs.map((conv) => (
             <button
               key={conv.other_user_id}
               onClick={() => navigate(`/dm/${conv.other_user_id}`, { state: { name: conv.other_profile.display_name } })}
@@ -87,7 +93,7 @@ export default function DMListPage() {
             </button>
           ))
         )}
-      </div>
+      </PullToRefresh>
 
       <BottomNav active="messages" />
     </div>

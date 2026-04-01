@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { useChannelStore } from '@/stores/channelStore';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { haptic } from '@/lib/haptic';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import type { RouteChannel } from '@/lib/types';
 import { ArrowLeft, RefreshCw, MessageSquare, Radio, ChevronRight } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
@@ -40,6 +42,7 @@ export default function ChannelsListPage() {
 
   const handleJoinLeave = async (channel: RouteChannel & { is_member?: boolean }) => {
     if (!profile) return;
+    haptic();
     setTogglingId(channel.id);
     try {
       if (channel.is_member) {
@@ -60,7 +63,7 @@ export default function ChannelsListPage() {
   const displayList = activeTab === 'joined' ? [...joinedChannels, ...suggestedChannels] : allChannels;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground">
@@ -86,13 +89,20 @@ export default function ChannelsListPage() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <PullToRefresh onRefresh={load} className="p-4 space-y-3">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : displayList.length === 0 ? (
-          <div className="text-center pt-16">
+          <div className="text-center pt-16 px-4">
             <div className="text-4xl mb-3">📡</div>
-            <p className="text-muted-foreground">{activeTab === 'joined' ? t('channels.noJoined') : t('channels.noAvailable')}</p>
+            <p className="text-foreground font-semibold mb-1">
+              {activeTab === 'joined' ? t('channels.noJoined') : t('channels.noAvailable')}
+            </p>
+            {activeTab === 'joined' && (
+              <p className="text-muted-foreground text-sm leading-relaxed mt-1">
+                Join a route channel to chat with drivers on your highway. Tap "All Channels" above to browse.
+              </p>
+            )}
           </div>
         ) : displayList.map((channel: any) => {
           const isSuggested = !channel.is_member && suggestedChannels.includes(channel);
@@ -135,7 +145,7 @@ export default function ChannelsListPage() {
             </div>
           );
         })}
-      </div>
+      </PullToRefresh>
 
       <BottomNav active="channels" />
     </div>
