@@ -201,7 +201,12 @@ export default function ChatPage() {
                   </div>
                 )}
                 <div className={`flex flex-col max-w-[72%] ${isSelf ? 'items-end' : 'items-start'}`}>
-                  {showAvatar && !isSelf && <p className="text-muted-foreground text-xs mb-1 px-1">{senderName}</p>}
+                  {showAvatar && !isSelf && (
+                    <div className="flex items-center gap-1 mb-1 px-1">
+                      <p className="text-muted-foreground text-xs">{senderName}</p>
+                      {(msg as any).sender?.is_verified && <VerifiedBadge />}
+                    </div>
+                  )}
                   <div
                     className={`px-3.5 py-2.5 rounded-2xl ${isDriving ? 'text-base' : 'text-sm'} leading-relaxed ${
                       optStatus === 'failed'
