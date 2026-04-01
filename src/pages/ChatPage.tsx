@@ -32,6 +32,7 @@ export default function ChatPage() {
   const { profile } = useAuthStore();
   const { t } = useTranslation();
   const { messages, setMessages, appendMessage } = useChannelStore();
+  const { isBlocked } = useBlockStore();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
