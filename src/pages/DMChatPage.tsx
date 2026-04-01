@@ -32,12 +32,16 @@ export default function DMChatPage() {
   const passedName = (location.state as { name?: string } | null)?.name;
   const { profile } = useAuthStore();
   const { t } = useTranslation();
+  const { blockUser, isBlocked } = useBlockStore();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [otherProfile, setOtherProfile] = useState<DriverProfile | null>(null);
   const [optimistic, setOptimistic] = useState<OptimisticDM[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTargetId, setReportTargetId] = useState('');
+  const [reportTargetType, setReportTargetType] = useState<'user' | 'message'>('user');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDriving = profile?.status === 'driving';
