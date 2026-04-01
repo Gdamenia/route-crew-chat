@@ -264,6 +264,7 @@ export default function DMChatPage() {
           <Send className={isDriving ? 'w-5 h-5 text-primary-foreground' : 'w-4 h-4 text-primary-foreground'} />
         </button>
       </div>
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} targetType={reportTargetType} targetId={reportTargetId} />
     </div>
   );
 }

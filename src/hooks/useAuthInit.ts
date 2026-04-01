@@ -30,6 +30,7 @@ export function useAuthInit() {
         }
 
         setProfile(profile);
+        loadBlocked(userId);
       } catch (_) {
         // Don't crash auth init on network errors
       }
