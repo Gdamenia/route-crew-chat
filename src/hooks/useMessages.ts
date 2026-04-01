@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { RouteMessage, DriverProfile } from '@/lib/types';
-import { useAuth } from '@/contexts/AuthContext';
+import type { RouteMessage } from '@/lib/types';
+import { useAuthStore } from '@/stores/authStore';
 
 export function useMessages(channelId: string | null) {
-  const { user } = useAuth();
+  const { session } = useAuthStore();
+  const userId = session?.user?.id;
   const [messages, setMessages] = useState<RouteMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -22,10 +23,10 @@ export function useMessages(channelId: string | null) {
   }, [channelId]);
 
   const sendMessage = async (text: string) => {
-    if (!user || !channelId) return;
+    if (!userId || !channelId) return;
     await supabase.from('route_messages').insert({
       channel_id: channelId,
-      sender_user_id: user.id,
+      sender_user_id: userId,
       text_content: text,
     });
   };

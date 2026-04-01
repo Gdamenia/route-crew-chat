@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
+import { authService } from '@/services/authService';
 import { Map, MessageSquare, Radio, User, Settings, LogOut, Menu, X, Mic } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 
@@ -14,8 +15,13 @@ const NAV_ITEMS = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, reset } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await authService.signOut();
+    reset();
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -67,7 +73,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         <div className="p-2 border-t border-border">
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground w-full transition-colors"
           >
             <LogOut className="w-4 h-4" />
@@ -107,7 +113,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               );
             })}
             <button
-              onClick={signOut}
+              onClick={handleSignOut}
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-muted-foreground w-full"
             >
               <LogOut className="w-4 h-4" />
