@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthStore } from "@/stores/authStore";
 
-// Lazy load all pages
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SignupPage = lazy(() => import("./pages/SignupPage"));
@@ -17,6 +16,8 @@ const ChannelsListPage = lazy(() => import("./pages/ChannelsListPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const VoiceRoomPage = lazy(() => import("./pages/VoiceRoomPage"));
 const ProfileFullPage = lazy(() => import("./pages/ProfileFullPage"));
+const DMListPage = lazy(() => import("./pages/DMListPage"));
+const DMChatPage = lazy(() => import("./pages/DMChatPage"));
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,8 @@ function AppRoutes() {
         <Route path="/chat/:channelId" element={<RequireProfile><ChatPage /></RequireProfile>} />
         <Route path="/voice/:channelId" element={<RequireProfile><VoiceRoomPage /></RequireProfile>} />
         <Route path="/profile" element={<RequireProfile><ProfileFullPage /></RequireProfile>} />
+        <Route path="/messages" element={<RequireProfile><DMListPage /></RequireProfile>} />
+        <Route path="/dm/:otherUserId" element={<RequireProfile><DMChatPage /></RequireProfile>} />
         <Route path="*" element={<Navigate to={session ? "/" : "/welcome"} replace />} />
       </Routes>
     </Suspense>

@@ -75,12 +75,14 @@ export const channelService = {
   },
 
   async getMessages(channelId: string): Promise<RouteMessage[]> {
+    const twentyFourAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('route_messages')
       .select('*')
       .eq('channel_id', channelId)
+      .gte('created_at', twentyFourAgo)
       .order('created_at', { ascending: true })
-      .limit(120);
+      .limit(200);
 
     if (error) throw error;
 
