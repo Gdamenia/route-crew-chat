@@ -25,7 +25,7 @@ export function PresetChips({ onSend, disabled }: PresetChipsProps) {
       {PRESET_KEYS.map((key) => (
         <button
           key={key}
-          onClick={() => onSend(t(key))}
+          onClick={() => { haptic(); onSend(t(key)); }}
           disabled={disabled}
           className="flex-shrink-0 min-h-[44px] px-3 py-2 bg-secondary border border-border rounded-xl text-foreground text-xs font-medium hover:bg-accent hover:border-primary/50 transition-colors disabled:opacity-40 whitespace-nowrap"
         >
