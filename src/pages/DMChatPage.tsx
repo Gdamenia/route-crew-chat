@@ -151,7 +151,10 @@ export default function DMChatPage() {
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AvatarDisplay name={displayName} photoUrl={otherProfile?.photo_url} size="sm" />
           <div className="min-w-0">
-            <p className="text-foreground font-bold text-sm truncate">{displayName}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-foreground font-bold text-sm truncate">{displayName}</p>
+              {otherProfile?.is_verified && <VerifiedBadge />}
+            </div>
             {isDnd && (
               <div className="flex items-center gap-1">
                 <ShieldAlert className="w-3 h-3 text-status-dnd" />
@@ -160,6 +163,16 @@ export default function DMChatPage() {
             )}
           </div>
         </div>
+        <button onClick={() => { setReportTargetId(resolvedOther); setReportTargetType('user'); setReportOpen(true); }} className="text-muted-foreground hover:text-destructive p-2 min-h-[44px] min-w-[44px] flex items-center justify-center">
+          <Flag className="w-4 h-4" />
+        </button>
+        <button onClick={async () => {
+          if (!profile) return;
+          if (!confirm(t('block.confirmBlock'))) return;
+          try { await blockUser(profile.user_id, resolvedOther); toast.success(t('block.blocked')); navigate('/messages'); } catch { toast.error(t('general.error')); }
+        }} className="text-muted-foreground hover:text-destructive p-2 min-h-[44px] min-w-[44px] flex items-center justify-center">
+          <Ban className="w-4 h-4" />
+        </button>
       </div>
 
       {isDnd && (
