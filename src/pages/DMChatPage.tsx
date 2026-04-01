@@ -144,7 +144,7 @@ export default function DMChatPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/messages')} className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center">
