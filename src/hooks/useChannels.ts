@@ -10,28 +10,25 @@ export function useChannels() {
   const [loading, setLoading] = useState(true);
 
   const fetchChannels = async () => {
-    const { data: channelsData } = await supabase
-      .from('route_channels')
-      .select('*')
-      .eq('is_active', true);
-
-    const { data: memberships } = userId
-      ? await supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', userId)
-      : { data: [] };
-
-    const { data: memberCounts } = await supabase
-      .from('route_channel_members')
-      .select('channel_id');
+    // All 3 queries in parallel instead of sequential
+    const [channelsRes, membershipsRes, memberCountsRes] = await Promise.all([
+      supabase.from('route_channels').select('*').eq('is_active', true),
+      userId
+        ? supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', userId)
+        : Promise.resolve({ data: [] as { channel_id: string; muted: boolean | null }[] }),
+      supabase.from('route_channel_members').select('channel_id'),
+    ]);
 
     const countMap: Record<string, number> = {};
-    memberCounts?.forEach((m: { channel_id: string }) => {
+    (memberCountsRes as any).data?.forEach((m: { channel_id: string }) => {
       countMap[m.channel_id] = (countMap[m.channel_id] || 0) + 1;
     });
 
-    const memberMap = new Map((memberships || []).map((m: { channel_id: string; muted: boolean | null }) => [m.channel_id, m] as const));
+    const memberships = ('data' in membershipsRes ? membershipsRes.data : []) || [];
+    const memberMap = new Map(memberships.map((m: any) => [m.channel_id, m] as const));
 
     setChannels(
-      (channelsData || []).map((ch: any) => {
+      (channelsRes.data || []).map((ch: any) => {
         const membership = memberMap.get(ch.id) as { muted: boolean | null } | undefined;
         return {
           ...ch,
