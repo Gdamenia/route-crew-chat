@@ -95,6 +95,7 @@ export default function ChatPage() {
 
   const sendText = async (content: string) => {
     if (!content.trim() || !profile || !resolvedChannelId) return;
+    haptic();
     const trimmed = content.trim();
     setText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
