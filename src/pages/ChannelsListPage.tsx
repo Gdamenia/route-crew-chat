@@ -4,12 +4,16 @@ import { channelService } from '@/services/channelService';
 import { useAuthStore } from '@/stores/authStore';
 import { useChannelStore } from '@/stores/channelStore';
 import { usePresenceStore } from '@/stores/presenceStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import type { RouteChannel } from '@/lib/types';
 import { ArrowLeft, RefreshCw, MessageSquare, Radio, ChevronRight } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
+import { DrivingBanner } from '@/components/DrivingBanner';
+import { SkeletonCard } from '@/components/Skeletons';
 
 export default function ChannelsListPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { profile } = useAuthStore();
   const { channels, setChannels, updateChannel } = useChannelStore();
   const { myRoute } = usePresenceStore();
@@ -28,7 +32,6 @@ export default function ChannelsListPage() {
     }
   }, [profile?.user_id]);
 
-  // Only fetch once on mount, or if store is empty
   useEffect(() => {
     if (loadedRef.current && channels.length > 0) return;
     loadedRef.current = true;
@@ -58,11 +61,12 @@ export default function ChannelsListPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      <DrivingBanner />
       <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
         <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-black text-foreground tracking-tight flex-1">Route Channels</h1>
+        <h1 className="text-lg font-black text-foreground tracking-tight flex-1">{t('channels.title')}</h1>
         <button onClick={() => { setLoading(true); load(); }} className="text-muted-foreground hover:text-primary">
           <RefreshCw className="w-5 h-5" />
         </button>
@@ -70,8 +74,8 @@ export default function ChannelsListPage() {
 
       <div className="flex border-b border-border bg-card">
         {[
-          { key: 'joined', label: `My Channels${joinedChannels.length > 0 ? ` (${joinedChannels.length})` : ''}` },
-          { key: 'all', label: 'All Channels' },
+          { key: 'joined', label: `${t('channels.myChannels')}${joinedChannels.length > 0 ? ` (${joinedChannels.length})` : ''}` },
+          { key: 'all', label: t('channels.allChannels') },
         ].map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as 'joined' | 'all')}
             className={`flex-1 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
@@ -84,13 +88,11 @@ export default function ChannelsListPage() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading ? (
-          <div className="flex justify-center pt-12">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-          </div>
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : displayList.length === 0 ? (
           <div className="text-center pt-16">
             <div className="text-4xl mb-3">📡</div>
-            <p className="text-muted-foreground">{activeTab === 'joined' ? 'No channels joined yet.' : 'No channels available.'}</p>
+            <p className="text-muted-foreground">{activeTab === 'joined' ? t('channels.noJoined') : t('channels.noAvailable')}</p>
           </div>
         ) : displayList.map((channel: any) => {
           const isSuggested = !channel.is_member && suggestedChannels.includes(channel);
@@ -98,7 +100,7 @@ export default function ChannelsListPage() {
             <div key={channel.id} className="bg-secondary border border-border rounded-xl overflow-hidden">
               {isSuggested && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border-b border-primary/50">
-                  <span className="text-primary text-xs font-semibold">📍 Your route</span>
+                  <span className="text-primary text-xs font-semibold">{t('channels.yourRoute')}</span>
                 </div>
               )}
               <div className="flex items-center gap-3 p-3">
@@ -112,20 +114,20 @@ export default function ChannelsListPage() {
                 <button
                   onClick={() => handleJoinLeave(channel)}
                   disabled={togglingId === channel.id}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] ${
                     channel.is_member
                       ? 'bg-accent border border-border text-muted-foreground hover:border-destructive hover:text-destructive'
                       : 'bg-primary text-primary-foreground hover:bg-primary/80'
                   }`}>
-                  {togglingId === channel.id ? '...' : channel.is_member ? 'Leave' : 'Join'}
+                  {togglingId === channel.id ? '...' : channel.is_member ? t('channels.leave') : t('channels.join')}
                 </button>
               </div>
               {channel.is_member && (
                 <button onClick={() => navigate(`/chat/${channel.id}`, { state: { channelName: channel.route_name } })}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-primary/10 border-t border-primary/50 hover:bg-primary/20 transition-colors">
+                  className="w-full flex items-center justify-between px-3 py-2 bg-primary/10 border-t border-primary/50 hover:bg-primary/20 transition-colors min-h-[44px]">
                   <span className="text-primary text-xs font-semibold flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    Open Chat
+                    {t('channels.openChat')}
                   </span>
                   <ChevronRight className="w-4 h-4 text-primary" />
                 </button>

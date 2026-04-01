@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { profileService } from '@/services/profileService';
 import { authService } from '@/services/authService';
+import { useTranslation } from '@/hooks/useTranslation';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { RouteInput } from '@/components/ui/RouteInput';
 import { RouteButton } from '@/components/ui/RouteButton';
@@ -14,6 +15,7 @@ import { BottomNav } from '@/components/BottomNav';
 
 export default function ProfileFullPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { profile, setProfile, reset } = useAuthStore();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [truckType, setTruckType] = useState(profile?.truck_type ?? '');
@@ -66,22 +68,27 @@ export default function ProfileFullPage() {
   };
 
   const handleSignOut = async () => {
-    if (!confirm('Sign out of RouteLink?')) return;
+    if (!confirm(t('general.signOutConfirm'))) return;
     await authService.signOut();
     reset();
   };
 
   if (!profile) return null;
 
+  const statusLabels: Record<string, string> = {
+    available: t('status.available'),
+    driving: t('status.driving'),
+    resting: t('status.resting'),
+    dnd: t('status.dnd'),
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
-        <h1 className="text-lg font-black text-foreground tracking-tight">Profile</h1>
-        <button onClick={handleSignOut} className="text-muted-foreground hover:text-destructive text-sm font-medium transition-colors">Sign Out</button>
+        <h1 className="text-lg font-black text-foreground tracking-tight">{t('profile.title')}</h1>
+        <button onClick={handleSignOut} className="text-muted-foreground hover:text-destructive text-sm font-medium transition-colors">{t('auth.signOut')}</button>
       </div>
 
-      {/* Avatar section */}
       <div className="flex-shrink-0 flex flex-col items-center py-6 bg-card border-b border-border">
         <div className="relative">
           <AvatarDisplay name={profile.display_name} photoUrl={profile.photo_url} size="xl" />
@@ -98,65 +105,63 @@ export default function ProfileFullPage() {
         <StatusBadge status={profile.status} showLabel size="md" />
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-border bg-card">
         {[
-          { key: 'profile', label: 'Profile' },
-          { key: 'status', label: 'Status' },
-          { key: 'settings', label: 'Settings' },
-        ].map((t) => (
-          <button key={t.key} onClick={() => setActiveSection(t.key as any)}
+          { key: 'profile', label: t('profile.title') },
+          { key: 'status', label: t('profile.driverStatus') },
+          { key: 'settings', label: t('profile.settings') },
+        ].map((tab) => (
+          <button key={tab.key} onClick={() => setActiveSection(tab.key as any)}
             className={`flex-1 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeSection === t.key ? 'text-primary border-primary' : 'text-muted-foreground border-transparent hover:text-foreground'
+              activeSection === tab.key ? 'text-primary border-primary' : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}>
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {activeSection === 'profile' && (
           <div className="space-y-0">
-            <RouteInput label="Display Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={30} />
+            <RouteInput label={t('profile.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={30} />
             <div className="mb-4">
-              <label className="block text-sm font-medium text-muted-foreground mb-2">Truck Type</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">{t('profile.truckType')}</label>
               <div className="flex flex-wrap gap-2">
-                {TRUCK_TYPES.map((t) => (
-                  <button key={t} type="button" onClick={() => setTruckType(truckType === t ? '' : t)}
+                {TRUCK_TYPES.map((tt) => (
+                  <button key={tt} type="button" onClick={() => setTruckType(truckType === tt ? '' : tt)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      truckType === t
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : 'bg-secondary border-border text-muted-foreground'
+                      truckType === tt ? 'bg-primary/10 border-primary text-primary' : 'bg-secondary border-border text-muted-foreground'
                     }`}>
-                    {t}
+                    {tt}
                   </button>
                 ))}
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-muted-foreground mb-1.5">Bio</label>
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="A bit about you..." maxLength={200} rows={3}
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('profile.bio')}</label>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="..." maxLength={200} rows={3}
                 className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground text-sm resize-none focus:outline-none focus:border-primary transition-colors" />
             </div>
-            <RouteButton onClick={handleSave} loading={saving} size="lg">Save Profile</RouteButton>
+            <RouteButton onClick={handleSave} loading={saving} size="lg">{t('profile.save')}</RouteButton>
           </div>
         )}
 
         {activeSection === 'status' && (
           <div className="space-y-6">
             <div>
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3">Driver Status</p>
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3">{t('profile.driverStatus')}</p>
               <div className="space-y-2">
                 {STATUS_OPTIONS.map((opt) => {
                   const isSelected = profile.status === opt.value;
                   return (
                     <button key={opt.value} onClick={() => handleStatusChange(opt.value)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors min-h-[48px] ${
                         isSelected ? 'bg-primary/10 border-primary' : 'bg-secondary border-border hover:border-muted-foreground'
                       }`}>
                       <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: opt.color }} />
-                      <span className={`flex-1 text-left text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>{opt.label}</span>
+                      <span className={`flex-1 text-left text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                        {statusLabels[opt.value] || opt.label}
+                      </span>
                       {isSelected && <CheckCircle2 className="w-5 h-5 text-primary" />}
                     </button>
                   );
@@ -164,13 +169,13 @@ export default function ProfileFullPage() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3">Visibility</p>
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3">{t('profile.visibility')}</p>
               <div className="space-y-2">
                 {VISIBILITY_OPTIONS.map((opt) => {
                   const isSelected = profile.visibility_mode === opt.value;
                   return (
                     <button key={opt.value} onClick={() => handleVisibilityChange(opt.value)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors min-h-[48px] ${
                         isSelected ? 'bg-primary/10 border-primary' : 'bg-secondary border-border hover:border-muted-foreground'
                       }`}>
                       <span className={`flex-1 text-left text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'}`}>{opt.label}</span>
@@ -181,7 +186,7 @@ export default function ProfileFullPage() {
               </div>
               <div className="flex gap-2 mt-4 p-3 bg-secondary rounded-xl border border-border">
                 <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                <p className="text-muted-foreground text-xs leading-relaxed">Hidden removes you from the live map entirely. Channel visibility keeps you present only in your joined channels.</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">Hidden removes you from the live map entirely.</p>
               </div>
             </div>
           </div>
@@ -189,16 +194,16 @@ export default function ProfileFullPage() {
 
         {activeSection === 'settings' && (
           <div className="space-y-3">
-            <button onClick={() => navigate('/channels')} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-muted-foreground transition-colors">
+            <button onClick={() => navigate('/channels')} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-muted-foreground transition-colors min-h-[48px]">
               <Radio className="w-5 h-5 text-muted-foreground" />
-              <span className="flex-1 text-left text-foreground text-sm">Route Channels</span>
+              <span className="flex-1 text-left text-foreground text-sm">{t('channels.title')}</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
-            <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-destructive transition-colors">
+            <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-destructive transition-colors min-h-[48px]">
               <LogOut className="w-5 h-5 text-destructive" />
-              <span className="flex-1 text-left text-destructive text-sm font-medium">Sign Out</span>
+              <span className="flex-1 text-left text-destructive text-sm font-medium">{t('auth.signOut')}</span>
             </button>
-            <p className="text-center text-muted-foreground text-xs mt-6">RouteLink v1.0.0 — Driver Network MVP</p>
+            <p className="text-center text-muted-foreground text-xs mt-6">RouteLink v1.0.0</p>
           </div>
         )}
       </div>

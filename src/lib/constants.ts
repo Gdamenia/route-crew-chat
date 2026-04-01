@@ -24,6 +24,11 @@ export const LANGUAGES = [
   { code: 'en' as const, name: 'English', native: 'English', flag: '🇺🇸' },
   { code: 'ru' as const, name: 'Russian', native: 'Русский', flag: '🇷🇺' },
   { code: 'ka' as const, name: 'Georgian', native: 'ქართული', flag: '🇬🇪' },
+  { code: 'es' as const, name: 'Spanish', native: 'Español', flag: '🇪🇸' },
+  { code: 'uk' as const, name: 'Ukrainian', native: 'Українська', flag: '🇺🇦' },
+  { code: 'pl' as const, name: 'Polish', native: 'Polski', flag: '🇵🇱' },
+  { code: 'hi' as const, name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'am' as const, name: 'Amharic', native: 'አማርኛ', flag: '🇪🇹' },
 ];
 
 export const PRESENCE_UPDATE_INTERVAL_MS = 30000;
