@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RouteChannel } from '@/lib/types';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
 export function useChannels() {
-  const { user } = useAuth();
+  const { session } = useAuthStore();
+  const userId = session?.user?.id;
   const [channels, setChannels] = useState<(RouteChannel & { is_member: boolean; is_muted: boolean; member_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,8 +15,8 @@ export function useChannels() {
       .select('*')
       .eq('is_active', true);
 
-    const { data: memberships } = user
-      ? await supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', user.id)
+    const { data: memberships } = userId
+      ? await supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', userId)
       : { data: [] };
 
     const { data: memberCounts } = await supabase
@@ -44,26 +45,26 @@ export function useChannels() {
   };
 
   const joinChannel = async (channelId: string) => {
-    if (!user) return;
-    await supabase.from('route_channel_members').insert({ channel_id: channelId, user_id: user.id });
+    if (!userId) return;
+    await supabase.from('route_channel_members').insert({ channel_id: channelId, user_id: userId });
     await fetchChannels();
   };
 
   const leaveChannel = async (channelId: string) => {
-    if (!user) return;
-    await supabase.from('route_channel_members').delete().eq('channel_id', channelId).eq('user_id', user.id);
+    if (!userId) return;
+    await supabase.from('route_channel_members').delete().eq('channel_id', channelId).eq('user_id', userId);
     await fetchChannels();
   };
 
   const toggleMute = async (channelId: string, muted: boolean) => {
-    if (!user) return;
-    await supabase.from('route_channel_members').update({ muted }).eq('channel_id', channelId).eq('user_id', user.id);
+    if (!userId) return;
+    await supabase.from('route_channel_members').update({ muted }).eq('channel_id', channelId).eq('user_id', userId);
     await fetchChannels();
   };
 
   useEffect(() => {
     fetchChannels();
-  }, [user]);
+  }, [userId]);
 
   return { channels, loading, joinChannel, leaveChannel, toggleMute, refetch: fetchChannels };
 }
