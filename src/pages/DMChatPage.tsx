@@ -207,7 +207,7 @@ export default function DMChatPage() {
             const optStatus = msg._status;
 
             return (
-              <div key={msg.id} className={`flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
+              <div key={msg.id} className={`msg-appear flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
                 onContextMenu={(e) => { if (!isOpt) { e.preventDefault(); setReportTargetId(msg.id); setReportTargetType('message'); setReportOpen(true); } }}
               >
                 {!isSelf && (
