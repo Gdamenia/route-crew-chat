@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { profileService } from '@/services/profileService';
 import { authService } from '@/services/authService';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -8,10 +9,13 @@ import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { RouteInput } from '@/components/ui/RouteInput';
 import { RouteButton } from '@/components/ui/RouteButton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { STATUS_OPTIONS, VISIBILITY_OPTIONS, TRUCK_TYPES } from '@/lib/constants';
-import type { UserStatus, VisibilityMode } from '@/lib/types';
-import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2 } from 'lucide-react';
+import type { UserStatus, VisibilityMode, DriverProfile } from '@/lib/types';
+import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function ProfileFullPage() {
   const navigate = useNavigate();
