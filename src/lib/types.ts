@@ -1,6 +1,7 @@
 export type UserStatus = 'available' | 'driving' | 'resting' | 'dnd';
 export type VisibilityMode = 'visible_nearby' | 'visible_channels' | 'hidden';
 export type TargetType = 'user' | 'message';
+export type MessageType = 'text' | 'voice' | 'location';
 export type Language = 'en' | 'ru' | 'ka' | 'es' | 'uk' | 'pl' | 'hi' | 'am';
 
 export interface AppUser {
@@ -20,6 +21,7 @@ export interface DriverProfile {
   status: UserStatus;
   visibility_mode: VisibilityMode;
   dnd_enabled: boolean;
+  is_verified?: boolean;
   created_at: string;
 }
 
@@ -53,6 +55,10 @@ export interface RouteMessage {
   channel_id: string;
   sender_user_id: string;
   text_content: string;
+  message_type?: MessageType;
+  media_url?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   created_at: string;
   sender?: DriverProfile;
 }
@@ -62,6 +68,10 @@ export interface DirectMessage {
   sender_id: string;
   receiver_id: string;
   text_content: string;
+  message_type?: MessageType;
+  media_url?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   is_read: boolean;
   created_at: string;
   sender?: DriverProfile;
@@ -72,4 +82,11 @@ export interface Conversation {
   other_profile: DriverProfile;
   last_message: DirectMessage;
   unread_count: number;
+}
+
+export interface BlockedUser {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
 }
