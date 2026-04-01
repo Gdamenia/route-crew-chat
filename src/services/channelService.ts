@@ -3,11 +3,14 @@ import type { RouteChannel, RouteMessage } from '@/lib/types';
 
 export const channelService = {
   async getAllChannels(userId: string): Promise<RouteChannel[]> {
-    const { data: channels, error } = await supabase.from('route_channels').select('*').eq('is_active', true).order('route_name');
-    if (error) throw error;
-    const { data: memberships } = await supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', userId);
-    const memberMap = new Map((memberships ?? []).map((m) => [m.channel_id, m] as const));
-    return (channels ?? []).map((c) => ({ ...c, is_member: memberMap.has(c.id), is_muted: memberMap.get(c.id)?.muted ?? false })) as unknown as RouteChannel[];
+    // Parallel fetch — channels + memberships at the same time
+    const [channelsRes, membershipsRes] = await Promise.all([
+      supabase.from('route_channels').select('*').eq('is_active', true).order('route_name'),
+      supabase.from('route_channel_members').select('channel_id, muted').eq('user_id', userId),
+    ]);
+    if (channelsRes.error) throw channelsRes.error;
+    const memberMap = new Map((membershipsRes.data ?? []).map((m) => [m.channel_id, m] as const));
+    return (channelsRes.data ?? []).map((c) => ({ ...c, is_member: memberMap.has(c.id), is_muted: memberMap.get(c.id)?.muted ?? false })) as unknown as RouteChannel[];
   },
 
   async joinChannel(channelId: string, userId: string) {
