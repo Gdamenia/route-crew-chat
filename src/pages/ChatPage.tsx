@@ -133,7 +133,7 @@ export default function ChatPage() {
   };
 
   const allMessages = [
-    ...channelMessages.map((m) => ({ ...m, _type: 'real' as const })),
+    ...channelMessages.filter((m) => !isBlocked(m.sender_user_id)).map((m) => ({ ...m, _type: 'real' as const })),
     ...optimistic.map((m) => ({ ...m, _type: 'optimistic' as const })),
   ];
 
