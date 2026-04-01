@@ -1,4 +1,5 @@
 import { useTranslation } from '@/hooks/useTranslation';
+import { haptic } from '@/lib/haptic';
 
 const PRESET_KEYS = [
   'preset.traffic',
