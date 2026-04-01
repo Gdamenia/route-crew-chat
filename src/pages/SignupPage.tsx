@@ -22,7 +22,9 @@ export default function SignupPage() {
     setError('');
     try {
       await authService.signUp(email, password);
-      setSuccess(true);
+      // Auto-confirm is enabled, so sign in immediately
+      await authService.signIn(email, password);
+      // Auth state change will handle navigation
     } catch (err: any) {
       setError(err.message ?? 'Signup failed');
     } finally {
