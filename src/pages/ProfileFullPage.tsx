@@ -216,6 +216,37 @@ export default function ProfileFullPage() {
               <span className="flex-1 text-left text-foreground text-sm">{t('channels.title')}</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
+
+            {/* Blocked Users */}
+            <div className="bg-secondary border border-border rounded-xl p-3.5">
+              <div className="flex items-center gap-2 mb-3">
+                <Ban className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground text-sm font-medium">{t('block.blockedUsers')}</span>
+              </div>
+              {blockedProfiles.length === 0 ? (
+                <p className="text-muted-foreground text-xs">{t('block.noBlocked')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {blockedProfiles.map((bp) => (
+                    <div key={bp.user_id} className="flex items-center gap-3 p-2 bg-background rounded-lg">
+                      <AvatarDisplay name={bp.display_name} photoUrl={bp.photo_url} size="sm" />
+                      <span className="flex-1 text-foreground text-sm truncate">{bp.display_name}</span>
+                      <button
+                        onClick={async () => {
+                          if (!profile) return;
+                          await unblockUser(profile.user_id, bp.user_id);
+                          toast.success(t('block.unblocked'));
+                        }}
+                        className="text-xs text-primary font-medium px-2 py-1 min-h-[36px]"
+                      >
+                        {t('block.unblock')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-destructive transition-colors min-h-[48px]">
               <LogOut className="w-5 h-5 text-destructive" />
               <span className="flex-1 text-left text-destructive text-sm font-medium">{t('auth.signOut')}</span>
