@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useBlockStore } from '@/stores/blockStore';
 import { presenceService } from '@/services/presenceService';
 import type { DriverWithProfile } from '@/lib/types';
 import { getStatusColor } from '@/lib/helpers';
