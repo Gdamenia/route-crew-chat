@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RouteChannel } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,8 +9,7 @@ export function useChannels() {
   const [channels, setChannels] = useState<(RouteChannel & { is_member: boolean; is_muted: boolean; member_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchChannels = async () => {
-    // All 3 queries in parallel instead of sequential
+  const fetchChannels = useCallback(async () => {
     const [channelsRes, membershipsRes, memberCountsRes] = await Promise.all([
       supabase.from('route_channels').select('*').eq('is_active', true),
       userId
@@ -39,29 +38,32 @@ export function useChannels() {
       })
     );
     setLoading(false);
-  };
+  }, [userId]);
 
-  const joinChannel = async (channelId: string) => {
+  const joinChannel = useCallback(async (channelId: string) => {
     if (!userId) return;
-    await supabase.from('route_channel_members').insert({ channel_id: channelId, user_id: userId });
+    await supabase.from('route_channel_members').upsert(
+      { channel_id: channelId, user_id: userId, muted: false },
+      { onConflict: 'channel_id,user_id' }
+    );
     await fetchChannels();
-  };
+  }, [userId, fetchChannels]);
 
-  const leaveChannel = async (channelId: string) => {
+  const leaveChannel = useCallback(async (channelId: string) => {
     if (!userId) return;
     await supabase.from('route_channel_members').delete().eq('channel_id', channelId).eq('user_id', userId);
     await fetchChannels();
-  };
+  }, [userId, fetchChannels]);
 
-  const toggleMute = async (channelId: string, muted: boolean) => {
+  const toggleMute = useCallback(async (channelId: string, muted: boolean) => {
     if (!userId) return;
     await supabase.from('route_channel_members').update({ muted }).eq('channel_id', channelId).eq('user_id', userId);
     await fetchChannels();
-  };
+  }, [userId, fetchChannels]);
 
   useEffect(() => {
     fetchChannels();
-  }, [userId]);
+  }, [fetchChannels]);
 
   return { channels, loading, joinChannel, leaveChannel, toggleMute, refetch: fetchChannels };
 }

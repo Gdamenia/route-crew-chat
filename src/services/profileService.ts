@@ -3,14 +3,19 @@ import type { DriverProfile, UserStatus, VisibilityMode } from '@/lib/types';
 
 export const profileService = {
   async getProfile(userId: string): Promise<DriverProfile | null> {
-    const { data } = await supabase.from('driver_profiles').select('*').eq('user_id', userId).single();
+    const { data, error } = await supabase.from('driver_profiles').select('*').eq('user_id', userId).maybeSingle();
+    if (error) throw error;
     return data as DriverProfile | null;
   },
 
   async createProfile(userId: string, displayName: string): Promise<DriverProfile> {
+    // Use upsert to avoid duplicate profile errors on re-login
     const { data, error } = await supabase
       .from('driver_profiles')
-      .insert({ user_id: userId, display_name: displayName, status: 'available', visibility_mode: 'visible_nearby', dnd_enabled: false })
+      .upsert(
+        { user_id: userId, display_name: displayName, status: 'available', visibility_mode: 'visible_nearby', dnd_enabled: false },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single();
     if (error) throw error;

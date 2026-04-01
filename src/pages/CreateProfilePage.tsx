@@ -1,43 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RouteButton } from '@/components/ui/RouteButton';
 import { RouteInput } from '@/components/ui/RouteInput';
 import { profileService } from '@/services/profileService';
-import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
 import { TRUCK_TYPES, LANGUAGES } from '@/lib/constants';
 import type { Language } from '@/lib/types';
-import { supabase } from '@/integrations/supabase/client';
 
 export default function CreateProfilePage() {
   const navigate = useNavigate();
-  const { setProfile, setUser } = useAuthStore();
+  const { session, profile, setProfile, setUser } = useAuthStore();
   const [displayName, setDisplayName] = useState('');
   const [truckType, setTruckType] = useState('');
   const [language, setLanguage] = useState<Language>('en');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Check if profile already exists (handles race condition)
+  useEffect(() => {
+    if (profile) {
+      navigate('/', { replace: true });
+      return;
+    }
+    // Double-check from DB in case store missed it
+    if (session?.user) {
+      profileService.getProfile(session.user.id).then((p) => {
+        if (p) {
+          setProfile(p);
+          navigate('/', { replace: true });
+        } else {
+          setLoading(false);
+        }
+      }).catch(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [session, profile]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) { setError('Display name is required'); return; }
+    if (!session?.user) { setError('Not authenticated'); return; }
     setLoading(true);
     setError('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Not authenticated');
-      const user = await authService.ensureUserRecord(session.user.id, session.user.email!, language);
-      setUser(user);
-      const profile = await profileService.createProfile(session.user.id, displayName.trim());
-      const updated = truckType ? await profileService.updateProfile(session.user.id, { truck_type: truckType }) : profile;
-      setProfile({ ...profile, ...updated });
-      navigate('/');
+      const created = await profileService.createProfile(session.user.id, displayName.trim());
+      const updated = truckType ? await profileService.updateProfile(session.user.id, { truck_type: truckType }) : created;
+      setProfile({ ...created, ...updated });
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message ?? 'Failed to create profile');
-    } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-10">
