@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePresenceStore } from '@/stores/presenceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { presenceService } from '@/services/presenceService';
@@ -14,25 +14,23 @@ export function MapView({ onDriverSelect }: MapViewProps) {
   const { myLocation, nearbyDrivers, setNearbyDrivers, upsertNearbyDriver, removeNearbyDriver } = usePresenceStore();
   const { profile } = useAuthStore();
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(!!(window as any).L);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const lastFetchRef = useRef<string>('');
 
-  // Load Leaflet dynamically
+  // Load Leaflet dynamically (only once)
   useEffect(() => {
-    const loadLeaflet = async () => {
-      if ((window as any).L) { setMapLoaded(true); return; }
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => setMapLoaded(true);
-      document.head.appendChild(script);
-    };
-    loadLeaflet();
+    if ((window as any).L) { setMapLoaded(true); return; }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setMapLoaded(true);
+    document.head.appendChild(script);
   }, []);
 
   // Init map
@@ -54,9 +52,12 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     }
   }, [myLocation?.lat, myLocation?.lng]);
 
-  // Load nearby drivers
+  // Load nearby drivers - debounced by rounding to ~1km grid
   useEffect(() => {
     if (!myLocation || !profile) return;
+    const key = `${myLocation.lat.toFixed(2)},${myLocation.lng.toFixed(2)}`;
+    if (key === lastFetchRef.current) return;
+    lastFetchRef.current = key;
     presenceService.getNearbyDrivers(myLocation.lat, myLocation.lng, 50).then((drivers) => {
       setNearbyDrivers(drivers.filter((d) => d.user_id !== profile.user_id));
     });
