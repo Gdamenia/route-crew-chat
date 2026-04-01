@@ -3,6 +3,7 @@ import { Map, MessageSquare, User, MessageCircle } from 'lucide-react';
 import { useUnreadStore } from '@/stores/unreadStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { haptic } from '@/lib/haptic';
 
 export function BottomNav({ active }: { active: string }) {
   const navigate = useNavigate();
@@ -21,12 +22,12 @@ export function BottomNav({ active }: { active: string }) {
   return (
     <div className="flex-shrink-0 flex bg-card border-t border-border">
       {tabs.map((tab) => (
-        <button key={tab.key} onClick={() => navigate(tab.path)}
+        <button key={tab.key} onClick={() => { haptic(); navigate(tab.path); }}
           className={`flex-1 flex flex-col items-center ${isDriving ? 'py-4' : 'py-3'} gap-0.5 transition-colors relative ${
             active === tab.key ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           }`}>
           <div className="relative">
-            <tab.icon className={isDriving ? 'w-7 h-7' : 'w-5 h-5'} />
+            <tab.icon className={`${isDriving ? 'w-7 h-7' : 'w-5 h-5'} ${active === tab.key ? 'tab-active-icon' : ''}`} />
             {tab.badge > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
                 <span className="text-[9px] text-destructive-foreground font-bold">{tab.badge > 9 ? '9+' : tab.badge}</span>
