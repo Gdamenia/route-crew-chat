@@ -117,6 +117,18 @@ const translations: Record<string, Record<SupportedLanguage, string>> = {
   'voice.connecting': { en: 'Connecting…', ru: 'Подключение…', ka: 'დაკავშირება…', es: 'Conectando…', uk: 'Підключення…', pl: 'Łączenie…', hi: 'कनेक्ट हो रहा है…', am: 'በመገናኘት ላይ…' },
   'voice.notConnected': { en: 'Not connected', ru: 'Не подключено', ka: 'არ არის დაკავშირებული', es: 'No conectado', uk: 'Не підключено', pl: 'Nie połączono', hi: 'कनेक्ट नहीं है', am: 'አልተገናኘም' },
 
+  // Report & Block
+  'report.title': { en: 'Report', ru: 'Пожаловаться', ka: 'შეტყობინება', es: 'Reportar', uk: 'Поскаржитися', pl: 'Zgłoś', hi: 'रिपोर्ट', am: 'ሪፖርት' },
+  'report.description': { en: 'Why are you reporting this?', ru: 'Почему вы жалуетесь?', ka: 'რატომ აცხადებთ?', es: '¿Por qué reportas esto?', uk: 'Чому ви скаржитесь?', pl: 'Dlaczego zgłaszasz?', hi: 'आप रिपोर्ट क्यों कर रहे हैं?', am: 'ለምን ሪፖርት ያደርጋሉ?' },
+  'report.submitted': { en: 'Report submitted. Thank you for keeping RouteLink safe.', ru: 'Жалоба отправлена. Спасибо за безопасность.', ka: 'შეტყობინება გაგზავნილია. მადლობა.', es: 'Reporte enviado. Gracias.', uk: 'Скаргу надіслано. Дякуємо.', pl: 'Zgłoszenie wysłane. Dziękujemy.', hi: 'रिपोर्ट सबमिट। धन्यवाद।', am: 'ሪፖርት ተልኳል። እናመሰግናለን።' },
+  'block.block': { en: 'Block', ru: 'Заблокировать', ka: 'დაბლოკვა', es: 'Bloquear', uk: 'Заблокувати', pl: 'Zablokuj', hi: 'ब्लॉक', am: 'ዝጋ' },
+  'block.unblock': { en: 'Unblock', ru: 'Разблокировать', ka: 'განბლოკვა', es: 'Desbloquear', uk: 'Розблокувати', pl: 'Odblokuj', hi: 'अनब्लॉक', am: 'ክፈት' },
+  'block.blocked': { en: 'User blocked', ru: 'Заблокирован', ka: 'დაბლოკილია', es: 'Bloqueado', uk: 'Заблоковано', pl: 'Zablokowany', hi: 'ब्लॉक किया', am: 'ተዘግቷል' },
+  'block.unblocked': { en: 'User unblocked', ru: 'Разблокирован', ka: 'განბლოკილია', es: 'Desbloqueado', uk: 'Розблоковано', pl: 'Odblokowany', hi: 'अनब्लॉक किया', am: 'ተከፍቷል' },
+  'block.blockedUsers': { en: 'Blocked Users', ru: 'Заблокированные', ka: 'დაბლოკილები', es: 'Bloqueados', uk: 'Заблоковані', pl: 'Zablokowani', hi: 'ब्लॉक किए गए', am: 'የተዘጉ' },
+  'block.noBlocked': { en: 'No blocked users', ru: 'Нет заблокированных', ka: 'არ არის', es: 'Sin bloqueados', uk: 'Немає', pl: 'Brak', hi: 'कोई नहीं', am: 'የሉም' },
+  'block.confirmBlock': { en: "Block this driver? They won't be able to message you.", ru: 'Заблокировать этого водителя?', ka: 'დაბლოკოთ ეს მძღოლი?', es: '¿Bloquear a este conductor?', uk: 'Заблокувати цього водія?', pl: 'Zablokować tego kierowcę?', hi: 'इस ड्राइवर को ब्लॉक करें?', am: 'ይህን ሹፌር ይዝጉ?' },
+
   // General
   'general.loading': { en: 'Loading...', ru: 'Загрузка...', ka: 'ჩატვირთვა...', es: 'Cargando...', uk: 'Завантаження...', pl: 'Ładowanie...', hi: 'लोड हो रहा है...', am: 'በመጫን ላይ...' },
   'general.error': { en: 'Something went wrong', ru: 'Что-то пошло не так', ka: 'რაღაც არასწორია', es: 'Algo salió mal', uk: 'Щось пішло не так', pl: 'Coś poszło nie tak', hi: 'कुछ गलत हो गया', am: 'የሆነ ስህተት ተከስቷል' },
