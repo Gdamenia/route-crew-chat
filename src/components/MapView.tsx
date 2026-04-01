@@ -129,11 +129,6 @@ export function MapView({ onDriverSelect }: MapViewProps) {
     });
 
     filteredDrivers.forEach((driver) => {
-        markersRef.current.delete(userId);
-      }
-    });
-
-    nearbyDrivers.forEach((driver) => {
       if (driver.lat == null || driver.lng == null) return;
       const statusColor = getStatusColor(driver.status);
       const name = driver.driver_profiles?.display_name ?? '?';
@@ -157,7 +152,7 @@ export function MapView({ onDriverSelect }: MapViewProps) {
         markersRef.current.set(driver.user_id, marker);
       }
     });
-  }, [nearbyDrivers]);
+  }, [filteredDrivers]);
 
   return (
     <div className="relative w-full h-full min-h-[400px]">
