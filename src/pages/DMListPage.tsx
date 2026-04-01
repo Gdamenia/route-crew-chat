@@ -70,7 +70,10 @@ export default function DMListPage() {
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center justify-between">
-                  <p className="text-foreground font-semibold text-sm truncate">{conv.other_profile.display_name}</p>
+                  <div className="flex items-center gap-1 min-w-0">
+                    <p className="text-foreground font-semibold text-sm truncate">{conv.other_profile.display_name}</p>
+                    {conv.other_profile.is_verified && <VerifiedBadge />}
+                  </div>
                   <span className="text-muted-foreground text-xs flex-shrink-0">{formatRelativeTime(conv.last_message.created_at)}</span>
                 </div>
                 <p className="text-muted-foreground text-xs truncate mt-0.5">{conv.last_message.text_content}</p>
