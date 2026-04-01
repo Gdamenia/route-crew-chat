@@ -71,6 +71,7 @@ export default function ProfileFullPage() {
 
   const handleStatusChange = async (status: UserStatus) => {
     if (!profile) return;
+    haptic();
     await profileService.updateStatus(profile.user_id, status);
     setProfile({ ...profile, status, dnd_enabled: status === 'dnd' });
   };
