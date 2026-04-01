@@ -105,7 +105,10 @@ export default function ProfileFullPage() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
         </div>
-        <p className="text-foreground font-bold text-lg mt-3">{profile.display_name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-foreground font-bold text-lg mt-3">{profile.display_name}</p>
+          {profile.is_verified && <VerifiedBadge size="md" />}
+        </div>
         <StatusBadge status={profile.status} showLabel size="md" />
       </div>
 
