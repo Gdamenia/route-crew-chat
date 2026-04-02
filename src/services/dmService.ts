@@ -70,10 +70,13 @@ export const dmService = {
     return messages.map((m) => ({ ...m, sender: profiles.get(m.sender_id) }));
   },
 
-  async sendMessage(senderId: string, receiverId: string, text: string): Promise<DirectMessage> {
+  async sendMessage(senderId: string, receiverId: string, text: string, messageType: string = 'text', mediaUrl?: string, locationLat?: number, locationLng?: number): Promise<DirectMessage> {
     const { data, error } = await supabase
       .from('direct_messages')
-      .insert({ sender_id: senderId, receiver_id: receiverId, text_content: text, message_type: 'text' })
+      .insert({
+        sender_id: senderId, receiver_id: receiverId, text_content: text, message_type: messageType,
+        media_url: mediaUrl ?? null, location_lat: locationLat ?? null, location_lng: locationLng ?? null,
+      })
       .select('*')
       .single();
 

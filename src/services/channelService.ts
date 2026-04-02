@@ -60,12 +60,10 @@ export const channelService = {
   },
 
   async sendMessage(channelId: string, userId: string, text: string, messageType: string = 'text', mediaUrl?: string, locationLat?: number, locationLng?: number): Promise<RouteMessage> {
-    const insertObj: Record<string, unknown> = {
+    const insertObj = {
       channel_id: channelId, sender_user_id: userId, text_content: text, message_type: messageType,
+      media_url: mediaUrl ?? null, location_lat: locationLat ?? null, location_lng: locationLng ?? null,
     };
-    if (mediaUrl) insertObj.media_url = mediaUrl;
-    if (locationLat != null) insertObj.location_lat = locationLat;
-    if (locationLng != null) insertObj.location_lng = locationLng;
     const { data, error } = await supabase
       .from('route_messages')
       .insert(insertObj)
