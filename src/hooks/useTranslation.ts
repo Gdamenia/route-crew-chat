@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { getTranslation, type SupportedLanguage } from '@/lib/i18n';
 
-const SUPPORTED: SupportedLanguage[] = ['en', 'ru', 'ka', 'es', 'uk', 'pl', 'hi', 'am'];
+const SUPPORTED: SupportedLanguage[] = ['en', 'ru', 'ka', 'es', 'uk', 'pl', 'hi', 'am', 'fr', 'pa'];
 
 function detectBrowserLang(): SupportedLanguage {
   if (typeof navigator === 'undefined') return 'en';
@@ -12,7 +12,8 @@ function detectBrowserLang(): SupportedLanguage {
 
 export function useTranslation() {
   const user = useAuthStore((s) => s.user);
-  const lang = (user?.language as SupportedLanguage) ?? detectBrowserLang();
+  const profile = useAuthStore((s) => s.profile);
+  const lang = ((profile?.language ?? user?.language) as SupportedLanguage) ?? detectBrowserLang();
 
   const t = useCallback(
     (key: string) => getTranslation(key, lang),

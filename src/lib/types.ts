@@ -2,7 +2,7 @@ export type UserStatus = 'available' | 'driving' | 'resting' | 'dnd';
 export type VisibilityMode = 'visible_nearby' | 'visible_channels' | 'hidden';
 export type TargetType = 'user' | 'message';
 export type MessageType = 'text' | 'voice' | 'location';
-export type Language = 'en' | 'ru' | 'ka' | 'es' | 'uk' | 'pl' | 'hi' | 'am';
+export type Language = 'en' | 'ru' | 'ka' | 'es' | 'uk' | 'pl' | 'hi' | 'am' | 'fr' | 'pa';
 
 export interface AppUser {
   id: string;
@@ -22,6 +22,8 @@ export interface DriverProfile {
   visibility_mode: VisibilityMode;
   dnd_enabled: boolean;
   is_verified?: boolean;
+  language?: string;
+  theme?: string;
   created_at: string;
 }
 

@@ -144,8 +144,10 @@ export type Database = {
           dnd_enabled: boolean | null
           id: string
           is_verified: boolean | null
+          language: string | null
           photo_url: string | null
           status: string | null
+          theme: string | null
           truck_type: string | null
           user_id: string
           visibility_mode: string | null
@@ -157,8 +159,10 @@ export type Database = {
           dnd_enabled?: boolean | null
           id?: string
           is_verified?: boolean | null
+          language?: string | null
           photo_url?: string | null
           status?: string | null
+          theme?: string | null
           truck_type?: string | null
           user_id: string
           visibility_mode?: string | null
@@ -170,8 +174,10 @@ export type Database = {
           dnd_enabled?: boolean | null
           id?: string
           is_verified?: boolean | null
+          language?: string | null
           photo_url?: string | null
           status?: string | null
+          theme?: string | null
           truck_type?: string | null
           user_id?: string
           visibility_mode?: string | null

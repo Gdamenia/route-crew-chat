@@ -11,9 +11,9 @@ import { RouteInput } from '@/components/ui/RouteInput';
 import { RouteButton } from '@/components/ui/RouteButton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
-import { STATUS_OPTIONS, VISIBILITY_OPTIONS, TRUCK_TYPES } from '@/lib/constants';
+import { STATUS_OPTIONS, VISIBILITY_OPTIONS, TRUCK_TYPES, LANGUAGES } from '@/lib/constants';
 import type { UserStatus, VisibilityMode, DriverProfile } from '@/lib/types';
-import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban } from 'lucide-react';
+import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban, Globe } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 export default function ProfileFullPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { profile, setProfile, reset } = useAuthStore();
+  const { profile, setProfile, user, setUser, reset } = useAuthStore();
   const { blockedIds, unblockUser } = useBlockStore();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [truckType, setTruckType] = useState(profile?.truck_type ?? '');
@@ -83,6 +83,23 @@ export default function ProfileFullPage() {
     setProfile({ ...profile, visibility_mode });
   };
 
+  const handleLanguageChange = async (langCode: string) => {
+    if (!profile) return;
+    haptic();
+    try {
+      await profileService.updateProfile(profile.user_id, { language: langCode } as any);
+      setProfile({ ...profile, language: langCode });
+      // Also update user store so useTranslation picks it up
+      if (user) {
+        await supabase.from('users').update({ language: langCode }).eq('id', user.id);
+        setUser({ ...user, language: langCode as any });
+      }
+      toast.success('✓');
+    } catch {
+      toast.error(t('general.error'));
+    }
+  };
+
   const handleSignOut = async () => {
     if (!confirm(t('general.signOutConfirm'))) return;
     await authService.signOut();
@@ -98,11 +115,13 @@ export default function ProfileFullPage() {
     dnd: t('status.dnd'),
   };
 
+  const currentLang = profile.language ?? user?.language ?? 'en';
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
         <h1 className="text-lg font-black text-foreground tracking-tight">{t('profile.title')}</h1>
-        <button onClick={handleSignOut} className="text-muted-foreground hover:text-destructive text-sm font-medium transition-colors">{t('auth.signOut')}</button>
+        <button onClick={handleSignOut} className="text-muted-foreground hover:text-destructive text-sm font-medium transition-colors min-h-[44px] flex items-center">{t('auth.signOut')}</button>
       </div>
 
       <div className="flex-shrink-0 flex flex-col items-center py-6 bg-card border-b border-border">
@@ -131,7 +150,7 @@ export default function ProfileFullPage() {
           { key: 'settings', label: t('profile.settings') },
         ].map((tab) => (
           <button key={tab.key} onClick={() => setActiveSection(tab.key as any)}
-            className={`flex-1 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            className={`flex-1 py-2.5 text-sm font-semibold border-b-2 transition-colors min-h-[44px] ${
               activeSection === tab.key ? 'text-primary border-primary' : 'text-muted-foreground border-transparent hover:text-foreground'
             }`}>
             {tab.label}
@@ -148,7 +167,7 @@ export default function ProfileFullPage() {
               <div className="flex flex-wrap gap-2">
                 {TRUCK_TYPES.map((tt) => (
                   <button key={tt} type="button" onClick={() => setTruckType(truckType === tt ? '' : tt)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[44px] ${
                       truckType === tt ? 'bg-primary/10 border-primary text-primary' : 'bg-secondary border-border text-muted-foreground'
                     }`}>
                     {tt}
@@ -205,7 +224,7 @@ export default function ProfileFullPage() {
               </div>
               <div className="flex gap-2 mt-4 p-3 bg-secondary rounded-xl border border-border">
                 <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                <p className="text-muted-foreground text-xs leading-relaxed">Hidden removes you from the live map entirely.</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">{t('general.hiddenWarning')}</p>
               </div>
             </div>
           </div>
@@ -213,6 +232,28 @@ export default function ProfileFullPage() {
 
         {activeSection === 'settings' && (
           <div className="space-y-3">
+            {/* Language selector */}
+            <div className="bg-secondary border border-border rounded-xl p-3.5">
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span className="text-foreground text-sm font-medium">{t('profile.language')}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {LANGUAGES.map((lang) => (
+                  <button key={lang.code} onClick={() => handleLanguageChange(lang.code)}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors min-h-[44px] ${
+                      currentLang === lang.code ? 'bg-primary/10 border-primary' : 'bg-background border-border hover:border-muted-foreground'
+                    }`}>
+                    <span className="text-base">{lang.flag}</span>
+                    <div className="text-left min-w-0">
+                      <p className={`text-xs font-medium truncate ${currentLang === lang.code ? 'text-primary' : 'text-foreground'}`}>{lang.native}</p>
+                    </div>
+                    {currentLang === lang.code && <CheckCircle2 className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button onClick={() => navigate('/channels')} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-muted-foreground transition-colors min-h-[48px]">
               <Radio className="w-5 h-5 text-muted-foreground" />
               <span className="flex-1 text-left text-foreground text-sm">{t('channels.title')}</span>
@@ -239,7 +280,7 @@ export default function ProfileFullPage() {
                           await unblockUser(profile.user_id, bp.user_id);
                           toast.success(t('block.unblocked'));
                         }}
-                        className="text-xs text-primary font-medium px-2 py-1 min-h-[36px]"
+                        className="text-xs text-primary font-medium px-2 py-1 min-h-[44px] flex items-center"
                       >
                         {t('block.unblock')}
                       </button>

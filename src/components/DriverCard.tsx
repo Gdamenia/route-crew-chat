@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { memo } from 'react';
 import type { DriverWithProfile, UserStatus } from '@/lib/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
@@ -18,7 +19,7 @@ interface DriverCardProps {
   onViewProfile: () => void;
 }
 
-export function DriverCard({ driver, onClose, onViewProfile }: DriverCardProps) {
+export const DriverCard = memo(function DriverCard({ driver, onClose, onViewProfile }: DriverCardProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { profile } = useAuthStore();
@@ -52,7 +53,7 @@ export function DriverCard({ driver, onClose, onViewProfile }: DriverCardProps) 
                 <p className="text-foreground font-bold text-base truncate">{p.display_name}</p>
                 {p.is_verified && <VerifiedBadge />}
               </div>
-              <button onClick={onClose} className="text-muted-foreground hover:text-foreground flex-shrink-0">
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -73,24 +74,24 @@ export function DriverCard({ driver, onClose, onViewProfile }: DriverCardProps) 
         <div className="flex gap-2 mt-3">
           <button
             onClick={() => navigate(`/dm/${driver.user_id}`, { state: { name: p.display_name } })}
-            className="flex-1 bg-primary text-primary-foreground text-sm font-semibold py-2 rounded-xl hover:bg-primary/80 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-primary text-primary-foreground text-sm font-semibold py-3 rounded-xl hover:bg-primary/80 transition-colors flex items-center justify-center gap-2 min-h-[48px]"
           >
             <MessageCircle className="w-4 h-4" />
-            {isDnd ? 'Text (Silent)' : 'Message'}
+            {isDnd ? t('driverCard.textSilent') : t('driverCard.message')}
           </button>
           <button
             onClick={onViewProfile}
-            className="flex-1 bg-primary/10 border border-primary/50 text-primary text-sm font-semibold py-2 rounded-xl hover:bg-primary/20 transition-colors"
+            className="flex-1 bg-primary/10 border border-primary/50 text-primary text-sm font-semibold py-3 rounded-xl hover:bg-primary/20 transition-colors min-h-[48px]"
           >
-            View Profile
+            {t('driverCard.viewProfile')}
           </button>
         </div>
         <div className="flex gap-2 mt-2">
-          <button onClick={() => setReportOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-muted-foreground text-xs hover:text-destructive transition-colors min-h-[36px]">
+          <button onClick={() => setReportOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-muted-foreground text-xs hover:text-destructive transition-colors min-h-[44px]">
             <Flag className="w-3.5 h-3.5" />
             {t('report.title')}
           </button>
-          <button onClick={handleBlock} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-muted-foreground text-xs hover:text-destructive transition-colors min-h-[36px]">
+          <button onClick={handleBlock} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-muted-foreground text-xs hover:text-destructive transition-colors min-h-[44px]">
             <Ban className="w-3.5 h-3.5" />
             {t('block.block')}
           </button>
@@ -99,4 +100,4 @@ export function DriverCard({ driver, onClose, onViewProfile }: DriverCardProps) 
       <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} targetType="user" targetId={driver.user_id} />
     </>
   );
-}
+});
