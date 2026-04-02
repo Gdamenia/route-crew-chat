@@ -48,16 +48,21 @@ export const dmService = {
     );
   },
 
-  async getMessages(userId: string, otherUserId: string): Promise<DirectMessage[]> {
-    const { data, error } = await supabase
+  async getMessages(userId: string, otherUserId: string, before?: string): Promise<DirectMessage[]> {
+    let query = supabase
       .from('direct_messages')
       .select('*')
       .or(
         `and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`
       )
       .order('created_at', { ascending: true })
-      .limit(500);
+      .limit(50);
 
+    if (before) {
+      query = query.lt('created_at', before);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
 
     const messages = (data ?? []) as unknown as DirectMessage[];
@@ -68,7 +73,7 @@ export const dmService = {
   async sendMessage(senderId: string, receiverId: string, text: string): Promise<DirectMessage> {
     const { data, error } = await supabase
       .from('direct_messages')
-      .insert({ sender_id: senderId, receiver_id: receiverId, text_content: text })
+      .insert({ sender_id: senderId, receiver_id: receiverId, text_content: text, message_type: 'text' })
       .select('*')
       .single();
 
