@@ -2,16 +2,22 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useBlockStore } from '@/stores/blockStore';
+import { usePresenceStore } from '@/stores/presenceStore';
 import { dmService } from '@/services/dmService';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useRateLimiter } from '@/hooks/useRateLimiter';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+import { LocationMessage } from '@/components/LocationMessage';
+import { NewMessagesButton } from '@/components/NewMessagesButton';
 import { formatChatTime } from '@/lib/helpers';
 import { haptic } from '@/lib/haptic';
-import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban, Loader2, MapPin } from 'lucide-react';
 import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -24,6 +30,10 @@ interface OptimisticDM {
   is_read: boolean;
   created_at: string;
   status: 'sending' | 'failed';
+  message_type?: string;
+  media_url?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 }
 
 export default function DMChatPage() {
@@ -34,6 +44,8 @@ export default function DMChatPage() {
   const { profile } = useAuthStore();
   const { t } = useTranslation();
   const { blockUser, isBlocked } = useBlockStore();
+  const { myLocation } = usePresenceStore();
+  const { checkLimit } = useRateLimiter();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,15 +57,23 @@ export default function DMChatPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportTargetId, setReportTargetId] = useState('');
   const [reportTargetType, setReportTargetType] = useState<'user' | 'message'>('user');
+  const [showNewMsg, setShowNewMsg] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDriving = profile?.status === 'driving';
-
   const resolvedOther = otherUserId ?? '';
+
+  const isNearBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
 
   const scrollToBottom = (smooth = false) => {
     requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+      setShowNewMsg(false);
     });
   };
 
@@ -73,7 +93,6 @@ export default function DMChatPage() {
   useEffect(() => {
     if (!profile || !resolvedOther) return;
     let mounted = true;
-
     dmService.getMessages(profile.user_id, resolvedOther).then((msgs) => {
       if (!mounted) return;
       setMessages(msgs);
@@ -85,20 +104,18 @@ export default function DMChatPage() {
     dmService.markAsRead(profile.user_id, resolvedOther);
 
     const unsub = dmService.subscribeToDMs(profile.user_id, (msg) => {
-      if (
-        (msg.sender_id === resolvedOther && msg.receiver_id === profile.user_id) ||
-        (msg.sender_id === profile.user_id && msg.receiver_id === resolvedOther)
-      ) {
+      if ((msg.sender_id === resolvedOther && msg.receiver_id === profile.user_id) ||
+          (msg.sender_id === profile.user_id && msg.receiver_id === resolvedOther)) {
         setOptimistic((prev) => prev.filter((o) => o.text_content !== msg.text_content || o.sender_id !== msg.sender_id));
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
-        scrollToBottom(true);
+        if (isNearBottom()) scrollToBottom(true);
+        else setShowNewMsg(true);
         if (msg.sender_id === resolvedOther) dmService.markAsRead(profile.user_id, resolvedOther);
       }
     });
-
     return () => { mounted = false; unsub(); };
   }, [profile?.user_id, resolvedOther]);
 
@@ -110,9 +127,7 @@ export default function DMChatPage() {
       const older = await dmService.getMessages(profile.user_id, resolvedOther, oldest);
       if (older.length < 50) setHasMore(false);
       if (older.length > 0) setMessages((prev) => [...older, ...prev]);
-    } finally {
-      setLoadingEarlier(false);
-    }
+    } finally { setLoadingEarlier(false); }
   };
 
   const isDnd = otherProfile?.dnd_enabled || otherProfile?.status === 'dnd';
@@ -120,6 +135,8 @@ export default function DMChatPage() {
 
   const sendText = async (content: string) => {
     if (!content.trim() || !profile || !resolvedOther) return;
+    const { allowed } = checkLimit();
+    if (!allowed) { toast.error('Slow down! Too many messages.'); return; }
     haptic();
     const trimmed = content.trim();
     setText('');
@@ -127,22 +144,34 @@ export default function DMChatPage() {
 
     const tempId = `opt_${Date.now()}`;
     const optMsg: OptimisticDM = {
-      id: tempId,
-      sender_id: profile.user_id,
-      receiver_id: resolvedOther,
-      text_content: trimmed,
-      is_read: false,
-      created_at: new Date().toISOString(),
-      status: 'sending',
+      id: tempId, sender_id: profile.user_id, receiver_id: resolvedOther,
+      text_content: trimmed, is_read: false, created_at: new Date().toISOString(), status: 'sending', message_type: 'text',
     };
     setOptimistic((prev) => [...prev, optMsg]);
     scrollToBottom(true);
-
     try {
       await dmService.sendMessage(profile.user_id, resolvedOther, trimmed);
     } catch {
       setOptimistic((prev) => prev.map((o) => o.id === tempId ? { ...o, status: 'failed' as const } : o));
     }
+  };
+
+  const sendVoice = async (url: string) => {
+    if (!profile || !resolvedOther) return;
+    haptic();
+    try {
+      await dmService.sendMessage(profile.user_id, resolvedOther, '🎤 Voice message', 'voice', url);
+      toast.success('Voice message sent');
+    } catch { toast.error(t('chat.sendFailed')); }
+  };
+
+  const sendLocation = async () => {
+    if (!profile || !resolvedOther || !myLocation) return;
+    haptic();
+    try {
+      await dmService.sendMessage(profile.user_id, resolvedOther, '📍 Location shared', 'location', undefined, myLocation.lat, myLocation.lng);
+      toast.success('Location shared');
+    } catch { toast.error(t('chat.sendFailed')); }
   };
 
   const handleRetry = (msg: OptimisticDM) => {
@@ -158,6 +187,13 @@ export default function DMChatPage() {
     ...messages.map((m) => ({ ...m, _type: 'real' as const, _status: null as string | null })),
     ...optimistic.map((m) => ({ ...m, _type: 'optimistic' as const, _status: m.status })),
   ];
+
+  const renderMessageContent = (msg: any, isSelf: boolean) => {
+    const type = msg.message_type || 'text';
+    if (type === 'voice' && msg.media_url) return <VoiceMessagePlayer url={msg.media_url} duration={30} isSelf={isSelf} />;
+    if (type === 'location' && msg.location_lat != null && msg.location_lng != null) return <LocationMessage lat={msg.location_lat} lng={msg.location_lng} isSelf={isSelf} />;
+    return <>{msg.text_content}</>;
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background page-enter">
@@ -199,12 +235,12 @@ export default function DMChatPage() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 relative">
         {hasMore && messages.length > 0 && (
           <div className="flex justify-center">
             <button onClick={loadEarlier} disabled={loadingEarlier}
-              className="text-primary text-xs font-semibold px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-50">
-              {loadingEarlier ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Load earlier messages'}
+              className="text-primary text-xs font-semibold px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-50 min-h-[44px]">
+              {loadingEarlier ? <Loader2 className="w-4 h-4 animate-spin" /> : t('chat.loadEarlier') || 'Load earlier messages'}
             </button>
           </div>
         )}
@@ -230,7 +266,6 @@ export default function DMChatPage() {
             const isSelf = msg.sender_id === profile?.user_id;
             const isOpt = msg._type === 'optimistic';
             const optStatus = msg._status;
-
             return (
               <div key={msg.id} className={`msg-appear flex items-end gap-2 ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}
                 onContextMenu={(e) => { if (!isOpt) { e.preventDefault(); setReportTargetId(msg.id); setReportTargetType('message'); setReportOpen(true); } }}
@@ -248,14 +283,13 @@ export default function DMChatPage() {
                       ? 'bg-primary text-primary-foreground rounded-br-md font-medium'
                       : 'bg-secondary border border-border text-foreground rounded-bl-md'
                   } ${optStatus === 'sending' ? 'opacity-60' : ''}`}>
-                    {msg.text_content}
+                    {renderMessageContent(msg, isSelf)}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 px-1">
                     {optStatus === 'sending' && <span className="text-muted-foreground text-xs">{t('chat.sending')}</span>}
                     {optStatus === 'failed' && (
                       <button onClick={() => handleRetry(msg as any)} className="flex items-center gap-1 text-destructive text-xs font-medium">
-                        <RotateCcw className="w-3 h-3" />
-                        {t('chat.retry')}
+                        <RotateCcw className="w-3 h-3" /> {t('chat.retry')}
                       </button>
                     )}
                     {!isOpt && <p className="text-muted-foreground text-xs">{formatChatTime(msg.created_at)}</p>}
@@ -266,13 +300,20 @@ export default function DMChatPage() {
           })
         )}
         <div ref={bottomRef} />
+        <NewMessagesButton visible={showNewMsg} onClick={() => scrollToBottom(true)} />
       </div>
 
       <div className="flex-shrink-0 px-4 py-1 bg-card border-t border-border">
         <PresetChips onSend={sendText} />
       </div>
 
-      <div className="flex-shrink-0 flex items-end gap-3 px-4 py-3 bg-card border-t border-border">
+      <div className="flex-shrink-0 flex items-end gap-2 px-4 py-3 bg-card border-t border-border">
+        {myLocation && (
+          <button onClick={sendLocation} className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]" aria-label="Share location">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
+        <VoiceRecorder onRecorded={sendVoice} disabled={isDriving} large={isDriving} />
         <textarea
           ref={textareaRef}
           value={text}
@@ -285,7 +326,7 @@ export default function DMChatPage() {
         <button
           onClick={() => sendText(text)}
           disabled={!text.trim()}
-          className={`${isDriving ? 'w-14 h-14' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary/80 transition-colors flex-shrink-0`}
+          className={`${isDriving ? 'w-14 h-14' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary/80 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]`}
           aria-label={t('chat.send')}
         >
           <Send className={isDriving ? 'w-5 h-5 text-primary-foreground' : 'w-4 h-4 text-primary-foreground'} />

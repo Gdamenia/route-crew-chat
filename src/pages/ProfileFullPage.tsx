@@ -11,9 +11,10 @@ import { RouteInput } from '@/components/ui/RouteInput';
 import { RouteButton } from '@/components/ui/RouteButton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { HosTimer } from '@/components/HosTimer';
 import { STATUS_OPTIONS, VISIBILITY_OPTIONS, TRUCK_TYPES, LANGUAGES } from '@/lib/constants';
 import type { UserStatus, VisibilityMode, DriverProfile } from '@/lib/types';
-import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban, Globe } from 'lucide-react';
+import { Camera, Radio, LogOut, ChevronRight, Shield, CheckCircle2, Ban, Globe, Download } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,7 +31,14 @@ export default function ProfileFullPage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [activeSection, setActiveSection] = useState<'profile' | 'status' | 'settings'>('profile');
   const [blockedProfiles, setBlockedProfiles] = useState<DriverProfile[]>([]);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   useEffect(() => {
     if (blockedIds.size === 0) { setBlockedProfiles([]); return; }
@@ -42,17 +50,16 @@ export default function ProfileFullPage() {
 
   const handleSave = async () => {
     if (!profile) return;
+    const trimmedName = displayName.trim().slice(0, 30);
+    if (!trimmedName) return;
     setSaving(true);
     try {
       const updated = await profileService.updateProfile(profile.user_id, {
-        display_name: displayName.trim(),
-        truck_type: truckType || undefined,
-        bio: bio || undefined,
+        display_name: trimmedName, truck_type: truckType || undefined, bio: bio || undefined,
       } as any);
       setProfile({ ...profile, ...updated });
-    } finally {
-      setSaving(false);
-    }
+      toast.success(t('profile.save'));
+    } finally { setSaving(false); }
   };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,11 +70,9 @@ export default function ProfileFullPage() {
       const url = await profileService.uploadPhoto(profile.user_id, file);
       await profileService.updateProfile(profile.user_id, { photo_url: url } as any);
       setProfile({ ...profile, photo_url: url });
-    } catch (err) {
-      console.error('Photo upload failed:', err);
-    } finally {
-      setPhotoUploading(false);
-    }
+      toast.success('✓');
+    } catch { toast.error(t('general.error')); }
+    finally { setPhotoUploading(false); }
   };
 
   const handleStatusChange = async (status: UserStatus) => {
@@ -89,15 +94,18 @@ export default function ProfileFullPage() {
     try {
       await profileService.updateProfile(profile.user_id, { language: langCode } as any);
       setProfile({ ...profile, language: langCode });
-      // Also update user store so useTranslation picks it up
       if (user) {
         await supabase.from('users').update({ language: langCode }).eq('id', user.id);
         setUser({ ...user, language: langCode as any });
       }
       toast.success('✓');
-    } catch {
-      toast.error(t('general.error'));
-    }
+    } catch { toast.error(t('general.error')); }
+  };
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    setInstallPrompt(null);
   };
 
   const handleSignOut = async () => {
@@ -109,16 +117,15 @@ export default function ProfileFullPage() {
   if (!profile) return null;
 
   const statusLabels: Record<string, string> = {
-    available: t('status.available'),
-    driving: t('status.driving'),
-    resting: t('status.resting'),
-    dnd: t('status.dnd'),
+    available: t('status.available'), driving: t('status.driving'),
+    resting: t('status.resting'), dnd: t('status.dnd'),
   };
 
   const currentLang = profile.language ?? user?.language ?? 'en';
+  const isDriving = profile.status === 'driving';
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background page-enter">
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
         <h1 className="text-lg font-black text-foreground tracking-tight">{t('profile.title')}</h1>
         <button onClick={handleSignOut} className="text-muted-foreground hover:text-destructive text-sm font-medium transition-colors min-h-[44px] flex items-center">{t('auth.signOut')}</button>
@@ -127,12 +134,8 @@ export default function ProfileFullPage() {
       <div className="flex-shrink-0 flex flex-col items-center py-6 bg-card border-b border-border">
         <div className="relative">
           <AvatarDisplay name={profile.display_name} photoUrl={profile.photo_url} size="xl" />
-          <button onClick={() => fileRef.current?.click()} className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary border-2 border-card flex items-center justify-center">
-            {photoUploading ? (
-              <div className="w-3 h-3 border border-primary-foreground border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Camera className="w-4 h-4 text-primary-foreground" />
-            )}
+          <button onClick={() => fileRef.current?.click()} className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary border-2 border-card flex items-center justify-center min-h-[44px] min-w-[44px]">
+            {photoUploading ? <div className="w-3 h-3 border border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Camera className="w-4 h-4 text-primary-foreground" />}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
         </div>
@@ -160,27 +163,28 @@ export default function ProfileFullPage() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {activeSection === 'profile' && (
-          <div className="space-y-0">
-            <RouteInput label={t('profile.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={30} />
-            <div className="mb-4">
+          <div className="space-y-4">
+            <RouteInput label={t('profile.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value.slice(0, 30))} maxLength={30} />
+            <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">{t('profile.truckType')}</label>
               <div className="flex flex-wrap gap-2">
                 {TRUCK_TYPES.map((tt) => (
-                  <button key={tt} type="button" onClick={() => setTruckType(truckType === tt ? '' : tt)}
+                  <button key={tt} onClick={() => setTruckType(truckType === tt ? '' : tt)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[44px] ${
                       truckType === tt ? 'bg-primary/10 border-primary text-primary' : 'bg-secondary border-border text-muted-foreground'
-                    }`}>
-                    {tt}
-                  </button>
+                    }`}>{tt}</button>
                 ))}
               </div>
             </div>
-            <div className="mb-4">
+            <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('profile.bio')}</label>
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="..." maxLength={200} rows={3}
                 className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground text-sm resize-none focus:outline-none focus:border-primary transition-colors" />
             </div>
             <RouteButton onClick={handleSave} loading={saving} size="lg">{t('profile.save')}</RouteButton>
+
+            {/* HOS Timer */}
+            <HosTimer isDriving={isDriving} />
           </div>
         )}
 
@@ -254,6 +258,15 @@ export default function ProfileFullPage() {
               </div>
             </div>
 
+            {/* PWA Install */}
+            {installPrompt && (
+              <button onClick={handleInstall} className="w-full flex items-center gap-3 p-3.5 bg-primary/10 border border-primary/50 rounded-xl hover:bg-primary/20 transition-colors min-h-[48px]">
+                <Download className="w-5 h-5 text-primary" />
+                <span className="flex-1 text-left text-primary text-sm font-semibold">Install RouteLink App</span>
+                <ChevronRight className="w-4 h-4 text-primary" />
+              </button>
+            )}
+
             <button onClick={() => navigate('/channels')} className="w-full flex items-center gap-3 p-3.5 bg-secondary border border-border rounded-xl hover:border-muted-foreground transition-colors min-h-[48px]">
               <Radio className="w-5 h-5 text-muted-foreground" />
               <span className="flex-1 text-left text-foreground text-sm">{t('channels.title')}</span>
@@ -274,14 +287,11 @@ export default function ProfileFullPage() {
                     <div key={bp.user_id} className="flex items-center gap-3 p-2 bg-background rounded-lg">
                       <AvatarDisplay name={bp.display_name} photoUrl={bp.photo_url} size="sm" />
                       <span className="flex-1 text-foreground text-sm truncate">{bp.display_name}</span>
-                      <button
-                        onClick={async () => {
-                          if (!profile) return;
-                          await unblockUser(profile.user_id, bp.user_id);
-                          toast.success(t('block.unblocked'));
-                        }}
-                        className="text-xs text-primary font-medium px-2 py-1 min-h-[44px] flex items-center"
-                      >
+                      <button onClick={async () => {
+                        if (!profile) return;
+                        await unblockUser(profile.user_id, bp.user_id);
+                        toast.success(t('block.unblocked'));
+                      }} className="text-xs text-primary font-medium px-2 py-1 min-h-[44px] flex items-center">
                         {t('block.unblock')}
                       </button>
                     </div>

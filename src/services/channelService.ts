@@ -59,10 +59,14 @@ export const channelService = {
     return attachSenders((data ?? []) as RouteMessage[]);
   },
 
-  async sendMessage(channelId: string, userId: string, text: string): Promise<RouteMessage> {
+  async sendMessage(channelId: string, userId: string, text: string, messageType: string = 'text', mediaUrl?: string, locationLat?: number, locationLng?: number): Promise<RouteMessage> {
+    const insertObj = {
+      channel_id: channelId, sender_user_id: userId, text_content: text, message_type: messageType,
+      media_url: mediaUrl ?? null, location_lat: locationLat ?? null, location_lng: locationLng ?? null,
+    };
     const { data, error } = await supabase
       .from('route_messages')
-      .insert({ channel_id: channelId, sender_user_id: userId, text_content: text, message_type: 'text' })
+      .insert(insertObj)
       .select('*')
       .single();
     if (error) throw error;
