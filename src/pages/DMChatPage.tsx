@@ -11,7 +11,7 @@ import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
 import { formatChatTime } from '@/lib/helpers';
 import { haptic } from '@/lib/haptic';
-import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban } from 'lucide-react';
+import { ArrowLeft, Send, AlertTriangle, ShieldAlert, RotateCcw, Flag, Ban, Loader2 } from 'lucide-react';
 import type { DirectMessage, DriverProfile } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -37,6 +37,8 @@ export default function DMChatPage() {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
   const [otherProfile, setOtherProfile] = useState<DriverProfile | null>(null);
   const [optimistic, setOptimistic] = useState<OptimisticDM[]>([]);
@@ -75,6 +77,7 @@ export default function DMChatPage() {
     dmService.getMessages(profile.user_id, resolvedOther).then((msgs) => {
       if (!mounted) return;
       setMessages(msgs);
+      setHasMore(msgs.length >= 50);
       setLoading(false);
       scrollToBottom();
     }).catch(() => { if (mounted) { setLoading(false); setError(t('chat.loadFailed')); } });
@@ -98,6 +101,19 @@ export default function DMChatPage() {
 
     return () => { mounted = false; unsub(); };
   }, [profile?.user_id, resolvedOther]);
+
+  const loadEarlier = async () => {
+    if (!profile || !resolvedOther || loadingEarlier || !hasMore || messages.length === 0) return;
+    setLoadingEarlier(true);
+    try {
+      const oldest = messages[0]?.created_at;
+      const older = await dmService.getMessages(profile.user_id, resolvedOther, oldest);
+      if (older.length < 50) setHasMore(false);
+      if (older.length > 0) setMessages((prev) => [...older, ...prev]);
+    } finally {
+      setLoadingEarlier(false);
+    }
+  };
 
   const isDnd = otherProfile?.dnd_enabled || otherProfile?.status === 'dnd';
   const displayName = otherProfile?.display_name ?? passedName ?? 'Driver';
@@ -184,6 +200,15 @@ export default function DMChatPage() {
       )}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {hasMore && messages.length > 0 && (
+          <div className="flex justify-center">
+            <button onClick={loadEarlier} disabled={loadingEarlier}
+              className="text-primary text-xs font-semibold px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-50">
+              {loadingEarlier ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Load earlier messages'}
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />

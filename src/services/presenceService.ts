@@ -9,7 +9,10 @@ export const presenceService = {
       { user_id: userId, lat, lng, heading: heading ?? 0, current_route, last_seen_at: new Date().toISOString(), is_visible: isVisible, status },
       { onConflict: 'user_id' }
     );
-    if (error) throw error;
+    if (error) {
+      console.error('[Presence] Upsert failed:', error.message);
+      throw error;
+    }
     return current_route;
   },
 
