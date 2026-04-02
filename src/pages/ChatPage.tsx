@@ -4,15 +4,22 @@ import { channelService } from '@/services/channelService';
 import { useAuthStore } from '@/stores/authStore';
 import { useBlockStore } from '@/stores/blockStore';
 import { useChannelStore } from '@/stores/channelStore';
+import { usePresenceStore } from '@/stores/presenceStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useRateLimiter } from '@/hooks/useRateLimiter';
 import { AvatarDisplay } from '@/components/AvatarDisplay';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { DrivingBanner } from '@/components/DrivingBanner';
 import { PresetChips } from '@/components/PresetChips';
 import { ReportModal } from '@/components/ReportModal';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+import { LocationMessage } from '@/components/LocationMessage';
+import { NewMessagesButton } from '@/components/NewMessagesButton';
 import { formatChatTime } from '@/lib/helpers';
 import { haptic } from '@/lib/haptic';
-import { ArrowLeft, Mic, Send, AlertTriangle, Clock, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Mic, Send, AlertTriangle, Clock, RotateCcw, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import type { RouteMessage } from '@/lib/types';
 
 interface OptimisticMessage {
@@ -22,6 +29,10 @@ interface OptimisticMessage {
   created_at: string;
   channel_id: string;
   status: 'sending' | 'failed';
+  message_type?: string;
+  media_url?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   sender?: { display_name: string };
 }
 
@@ -34,22 +45,33 @@ export default function ChatPage() {
   const { t } = useTranslation();
   const { messages, setMessages, appendMessage } = useChannelStore();
   const { isBlocked } = useBlockStore();
+  const { myLocation } = usePresenceStore();
+  const { checkLimit } = useRateLimiter();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [optimistic, setOptimistic] = useState<OptimisticMessage[]>([]);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportTargetId, setReportTargetId] = useState('');
+  const [showNewMsg, setShowNewMsg] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDriving = profile?.status === 'driving';
 
   const resolvedChannelId = channelId ?? '';
   const channelMessages = messages[resolvedChannelId] ?? [];
 
+  const isNearBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
+
   const scrollToBottom = (smooth = false) => {
     requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+      setShowNewMsg(false);
     });
   };
 
@@ -80,21 +102,23 @@ export default function ChatPage() {
     });
 
     const unsubscribe = channelService.subscribeToMessages(resolvedChannelId, (msg) => {
-      // Remove matching optimistic message
       setOptimistic((prev) => prev.filter((o) => o.text_content !== msg.text_content || o.sender_user_id !== msg.sender_user_id));
       appendMessage(resolvedChannelId, msg);
-      scrollToBottom(true);
+      if (isNearBottom()) scrollToBottom(true);
+      else setShowNewMsg(true);
     });
 
     return () => { isMounted = false; unsubscribe(); };
   }, [resolvedChannelId, setMessages, appendMessage]);
 
   useEffect(() => {
-    if (channelMessages.length > 0) scrollToBottom();
+    if (channelMessages.length > 0 && isNearBottom()) scrollToBottom();
   }, [channelMessages.length]);
 
   const sendText = async (content: string) => {
     if (!content.trim() || !profile || !resolvedChannelId) return;
+    const { allowed } = checkLimit();
+    if (!allowed) { toast.error(t('chat.rateLimited') || 'Slow down! Too many messages.'); return; }
     haptic();
     const trimmed = content.trim();
     setText('');
@@ -102,23 +126,39 @@ export default function ChatPage() {
 
     const tempId = `opt_${Date.now()}`;
     const optMsg: OptimisticMessage = {
-      id: tempId,
-      text_content: trimmed,
-      sender_user_id: profile.user_id,
-      created_at: new Date().toISOString(),
-      channel_id: resolvedChannelId,
-      status: 'sending',
-      sender: { display_name: profile.display_name },
+      id: tempId, text_content: trimmed, sender_user_id: profile.user_id,
+      created_at: new Date().toISOString(), channel_id: resolvedChannelId, status: 'sending',
+      message_type: 'text', sender: { display_name: profile.display_name },
     };
-
     setOptimistic((prev) => [...prev, optMsg]);
     scrollToBottom(true);
 
     try {
       await channelService.sendMessage(resolvedChannelId, profile.user_id, trimmed);
-      // Realtime will handle removal from optimistic and adding to store
     } catch {
       setOptimistic((prev) => prev.map((o) => o.id === tempId ? { ...o, status: 'failed' as const } : o));
+    }
+  };
+
+  const sendVoice = async (url: string, _duration: number) => {
+    if (!profile || !resolvedChannelId) return;
+    haptic();
+    try {
+      await channelService.sendMessage(resolvedChannelId, profile.user_id, '🎤 Voice message', 'voice', url);
+      toast.success(t('chat.voiceSent') || 'Voice message sent');
+    } catch {
+      toast.error(t('chat.sendFailed'));
+    }
+  };
+
+  const sendLocation = async () => {
+    if (!profile || !resolvedChannelId || !myLocation) return;
+    haptic();
+    try {
+      await channelService.sendMessage(resolvedChannelId, profile.user_id, '📍 Location shared', 'location', undefined, myLocation.lat, myLocation.lng);
+      toast.success(t('chat.locationSent') || 'Location shared');
+    } catch {
+      toast.error(t('chat.sendFailed'));
     }
   };
 
@@ -128,16 +168,24 @@ export default function ChatPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendText(text);
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(text); }
   };
 
   const allMessages = [
     ...channelMessages.filter((m) => !isBlocked(m.sender_user_id)).map((m) => ({ ...m, _type: 'real' as const })),
     ...optimistic.map((m) => ({ ...m, _type: 'optimistic' as const })),
   ];
+
+  const renderMessageContent = (msg: any, isSelf: boolean) => {
+    const type = msg.message_type || 'text';
+    if (type === 'voice' && msg.media_url) {
+      return <VoiceMessagePlayer url={msg.media_url} duration={30} isSelf={isSelf} />;
+    }
+    if (type === 'location' && msg.location_lat != null && msg.location_lng != null) {
+      return <LocationMessage lat={msg.location_lat} lng={msg.location_lng} isSelf={isSelf} />;
+    }
+    return <>{msg.text_content}</>;
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background page-enter">
@@ -162,7 +210,7 @@ export default function ChatPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 relative">
         <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl px-3 py-2">
           <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           <p className="text-muted-foreground text-xs">{t('chat.24hBanner')}</p>
@@ -181,7 +229,7 @@ export default function ChatPage() {
           </div>
         ) : allMessages.length === 0 ? (
           <div className="text-center pt-16">
-            <div className="text-4xl mb-3">💬</div>
+            <div className="text-4xl mb-3">👋</div>
             <p className="text-muted-foreground">{t('chat.noMessages')}</p>
           </div>
         ) : (
@@ -209,25 +257,20 @@ export default function ChatPage() {
                       {(msg as any).sender?.is_verified && <VerifiedBadge />}
                     </div>
                   )}
-                  <div
-                    className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
-                      optStatus === 'failed'
-                        ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
-                        : isSelf
-                        ? 'bg-primary text-primary-foreground rounded-br-md font-medium'
-                        : 'bg-secondary border border-border text-foreground rounded-bl-md'
-                    } ${optStatus === 'sending' ? 'opacity-60' : ''}`}
-                  >
-                    {msg.text_content}
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-base leading-relaxed ${
+                    optStatus === 'failed'
+                      ? 'bg-destructive/20 border border-destructive/50 text-destructive rounded-br-md'
+                      : isSelf
+                      ? 'bg-primary text-primary-foreground rounded-br-md font-medium'
+                      : 'bg-secondary border border-border text-foreground rounded-bl-md'
+                  } ${optStatus === 'sending' ? 'opacity-60' : ''}`}>
+                    {renderMessageContent(msg, isSelf)}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 px-1">
-                    {optStatus === 'sending' && (
-                      <span className="text-muted-foreground text-xs">{t('chat.sending')}</span>
-                    )}
+                    {optStatus === 'sending' && <span className="text-muted-foreground text-xs">{t('chat.sending')}</span>}
                     {optStatus === 'failed' && (
                       <button onClick={() => handleRetry(msg as any)} className="flex items-center gap-1 text-destructive text-xs font-medium">
-                        <RotateCcw className="w-3 h-3" />
-                        {t('chat.retry')}
+                        <RotateCcw className="w-3 h-3" /> {t('chat.retry')}
                       </button>
                     )}
                     {!isOpt && <p className="text-muted-foreground text-xs">{formatChatTime(msg.created_at)}</p>}
@@ -238,14 +281,20 @@ export default function ChatPage() {
           })
         )}
         <div ref={bottomRef} />
+        <NewMessagesButton visible={showNewMsg} onClick={() => scrollToBottom(true)} />
       </div>
 
-      {/* Preset chips */}
       <div className="flex-shrink-0 px-4 py-1 bg-card border-t border-border">
         <PresetChips onSend={sendText} />
       </div>
 
-      <div className="flex-shrink-0 flex items-end gap-3 px-4 py-3 bg-card border-t border-border">
+      <div className="flex-shrink-0 flex items-end gap-2 px-4 py-3 bg-card border-t border-border">
+        {myLocation && (
+          <button onClick={sendLocation} className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]" aria-label="Share location">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
+        <VoiceRecorder onRecorded={sendVoice} disabled={isDriving} large={isDriving} />
         <textarea
           ref={textareaRef}
           value={text}
@@ -258,7 +307,7 @@ export default function ChatPage() {
         <button
           onClick={() => sendText(text)}
           disabled={!text.trim()}
-          className={`${isDriving ? 'w-14 h-14' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary/80 transition-colors flex-shrink-0`}
+          className={`${isDriving ? 'w-14 h-14' : 'w-10 h-10'} rounded-full bg-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary/80 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px]`}
           aria-label={t('chat.send')}
         >
           <Send className={isDriving ? 'w-5 h-5 text-primary-foreground' : 'w-4 h-4 text-primary-foreground'} />
