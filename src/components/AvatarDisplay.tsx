@@ -15,7 +15,7 @@ export function AvatarDisplay({ name, photoUrl, size = 'md' }: AvatarDisplayProp
   const initial = name.charAt(0).toUpperCase();
 
   if (photoUrl) {
-    return <img src={photoUrl} alt={name} className={`${sizeClasses[size]} rounded-full object-cover flex-shrink-0`} />;
+    return <img src={photoUrl} alt={name} loading="lazy" className={`${sizeClasses[size]} rounded-full object-cover flex-shrink-0`} />;
   }
 
   return (

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthInit } from "@/hooks/useAuthInit";
 import { useAuthStore } from "@/stores/authStore";
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { Radio } from 'lucide-react';
 
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
@@ -61,6 +62,7 @@ function AppRoutes() {
 
   return (
     <Suspense fallback={<SplashScreen />}>
+      <OfflineBanner />
       <Routes>
         <Route path="/welcome" element={session ? (profile ? <Navigate to="/" /> : <Navigate to="/create-profile" />) : <OnboardingPage />} />
         <Route path="/login" element={session ? <Navigate to="/" /> : <LoginPage />} />

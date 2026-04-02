@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import { memo } from 'react';
 import { Map, MessageSquare, User, MessageCircle } from 'lucide-react';
 import { useUnreadStore } from '@/stores/unreadStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { haptic } from '@/lib/haptic';
 
-export function BottomNav({ active }: { active: string }) {
+export const BottomNav = memo(function BottomNav({ active }: { active: string }) {
   const navigate = useNavigate();
   const { unreadDMs, unreadChannels } = useUnreadStore();
   const { profile } = useAuthStore();
@@ -23,7 +24,7 @@ export function BottomNav({ active }: { active: string }) {
     <div className="flex-shrink-0 flex bg-card border-t border-border">
       {tabs.map((tab) => (
         <button key={tab.key} onClick={() => { haptic(); navigate(tab.path); }}
-          className={`flex-1 flex flex-col items-center ${isDriving ? 'py-4' : 'py-3'} gap-0.5 transition-colors relative ${
+          className={`flex-1 flex flex-col items-center ${isDriving ? 'py-4' : 'py-3'} gap-0.5 transition-colors relative min-h-[48px] ${
             active === tab.key ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           }`}>
           <div className="relative">
@@ -39,4 +40,4 @@ export function BottomNav({ active }: { active: string }) {
       ))}
     </div>
   );
-}
+});
